@@ -1,0 +1,3 @@
+**/*.c
+./test/run_output.json
+./test/run

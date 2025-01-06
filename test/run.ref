@@ -1,0 +1,25 @@
+*$FROM LibraryEx
+$EXTERN ArgList, LoadFile;
+
+*$FROM Json
+$EXTERN Json-Parse, Json-Stringify;
+
+
+$ENTRY Go {
+  , <ArgList> : {
+    (e.Exe) (e.File)
+      , <UnwrapLines <LoadFile e.File>> : e.Content
+      , <Json-Parse e.Content> : Success t.Json
+      , <Json-Stringify t.Json> : e.JsonString
+      = <Print e.JsonString>;
+
+    e.Wtf
+      = <Prout 'Usage: test file.json'>;
+  };
+}
+
+
+UnwrapLines {
+  (e.Line) e.Lines = e.Line '\n' <UnwrapLines e.Lines>;
+  /* empty */ = /* empty */;
+}
