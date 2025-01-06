@@ -1,0 +1,285 @@
+/*
+json
+  element
+
+value
+  object
+  array
+  string
+  number
+  "true"
+  "false"
+  "null"
+
+object
+  '{' ws '}'
+  '{' members '}'
+
+members
+  member
+  member ',' members
+
+member
+  ws string ws ':' element
+
+array
+  '[' ws ']'
+  '[' elements ']'
+
+elements
+  element
+  element ',' elements
+
+element
+  ws value ws
+
+string
+  '"' characters '"'
+
+characters
+  ""
+  character characters
+
+character
+  '0020' . '10FFFF' - '"' - '\'
+  '\' escape
+
+escape
+  '"'
+  '\'
+  '/'
+  'b'
+  'f'
+  'n'
+  'r'
+  't'
+  'u' hex hex hex hex
+
+hex
+  digit
+  'A' . 'F'
+  'a' . 'f'
+
+number
+  integer fraction exponent
+
+integer
+  digit
+  onenine digits
+  '-' digit
+  '-' onenine digits
+
+digits
+  digit
+  digit digits
+
+digit
+  '0'
+  onenine
+
+onenine
+  '1' . '9'
+
+fraction
+  ""
+  '.' digits
+
+exponent
+  ""
+  'E' sign digits
+  'e' sign digits
+
+sign
+  ""
+  '+'
+  '-'
+
+ws
+  ""
+  '0020' ws
+  '000A' ws
+  '000D' ws
+  '0009' ws
+*/
+
+
+$ENTRY Json-Parse {
+  e.Content = <Json-Parse-FSM 0 (Json) e.Content '$'>;
+}
+
+
+Json-Parse-FSM {
+  s.Cursor t.Stack s.Char e.Rest, <Json-Parse-FSM-Next t.Stack s.Char> : {
+    t.NewStack s.CharIgnored = <Json-Parse-FSM s.Cursor t.NewStack s.CharIgnored e.Rest>;
+
+    t.NewStack /* empty */ = <Json-Parse-FSM <Add 1 s.Cursor> t.NewStack e.Rest>;
+
+    e.Wtf = <Prout 'Json-Parse-FSM0 Wtf: ' e.Wtf>;
+  };
+
+  s.Cursor (e.Json) /* empty */ = s.Cursor e.Json;
+
+  e.Wtf = <Prout 'Json-Parse-FSM Wtf: ' e.Wtf>;
+}
+
+
+Json-Parse-FSM-Next {
+  (Json) s.Char = (Json Element) s.Char;
+
+* element
+  (e.Stack Element) s.Char, <IsWs s.Char> : True = (e.Stack Element);
+  (e.Stack Element) s.Char = (e.Stack Element Value) s.Char;
+  (e.Stack Element (e.Value)) s.Char, <IsWs s.Char> : True = (e.Stack Element (e.Value));
+  (e.Stack Element (e.Value)) s.Char = (e.Stack (e.Value)) s.Char;
+
+* value
+  (e.Stack Value) 'n' = (e.Stack Value Null) 'n';
+  (e.Stack Value) 't' = (e.Stack Value True) 't';
+  (e.Stack Value) 'f' = (e.Stack Value False) 'f';
+  (e.Stack Value) '"' = (e.Stack Value String) '"';
+  (e.Stack Value) '-' = (e.Stack Value Number) '-';
+  (e.Stack Value) '+' = (e.Stack Value Number) '-';
+  (e.Stack Value) s.Char, <Type s.Char> : 'D' e.1 = (e.Stack Value Number) s.Char;
+  (e.Stack Value) '{' = (e.Stack Value Object) '{';
+  (e.Stack Value) '[' = (e.Stack Value Array) '[';
+  (e.Stack Value (e.Value)) s.Char = (e.Stack (e.Value)) s.Char;
+
+* null
+  (e.Stack Null      ) 'n' = (e.Stack Null 'n');
+  (e.Stack Null 'n'  ) 'u' = (e.Stack Null 'nu');
+  (e.Stack Null 'nu' ) 'l' = (e.Stack Null 'nul');
+  (e.Stack Null 'nul') 'l' = (e.Stack (Null));
+
+* true
+  (e.Stack True      ) 't' = (e.Stack True 't');
+  (e.Stack True 't'  ) 'r' = (e.Stack True 'tr');
+  (e.Stack True 'tr' ) 'u' = (e.Stack True 'tru');
+  (e.Stack True 'tru') 'e' = (e.Stack (True));
+
+* false
+  (e.Stack False       ) 'f' = (e.Stack False 'f');
+  (e.Stack False 'f'   ) 'a' = (e.Stack False 'fa');
+  (e.Stack False 'fa'  ) 'l' = (e.Stack False 'fal');
+  (e.Stack False 'fal' ) 's' = (e.Stack False 'fals');
+  (e.Stack False 'fals') 'e' = (e.Stack (False));
+
+* string
+  (e.Stack String) '"' = (e.Stack String ());
+
+  (e.Stack String (e.String)) '"' = (e.Stack (String e.String));
+
+  (e.Stack String (e.String)) '\\' = (e.Stack String (e.String) Escape);
+
+  (e.Stack String (e.String) Escape) '"'  = (e.Stack String (e.String '"'));
+  (e.Stack String (e.String) Escape) '\\' = (e.Stack String (e.String '\\'));
+  (e.Stack String (e.String) Escape) '/'  = (e.Stack String (e.String '/'));
+  (e.Stack String (e.String) Escape) 'b'  = (e.Stack String (e.String '\x08'));
+  (e.Stack String (e.String) Escape) 'f'  = (e.Stack String (e.String '\x0C'));
+  (e.Stack String (e.String) Escape) 'n'  = (e.Stack String (e.String '\n'));
+  (e.Stack String (e.String) Escape) 'r'  = (e.Stack String (e.String '\r'));
+  (e.Stack String (e.String) Escape) 't'  = (e.Stack String (e.String '\t'));
+
+  (e.Stack Escape) 'u' = (e.Stack Unicode ());
+
+  (e.Stack String (e.String) Unicode (e.U)) s.Char
+    , <Type s.Char> : 'D' e.1
+    = (e.Stack String (e.String) Unicode (e.U s.Char));
+
+  (e.Stack String (e.String) Unicode (e.U)) s.Char
+    , <Upper s.Char> : s.UChar
+    , 'ABCDEF' : e.H-B s.UChar e.H-E
+    = (e.Stack String (e.String) Unicode (e.U s.Char));
+
+  (e.Stack String (e.String) Unicode (s.U0 s.U1 s.U2 s.U3)) s.Char
+    = (e.Stack String (e.String <Chr <Hex2Numb s.U0 s.U1 s.U2 s.U3>>)) s.Char;
+
+  (e.Stack String (e.String)) s.Char = (e.Stack String (e.String s.Char));
+
+* number
+  (e.Stack Number) '-' = (e.Stack Number ('-'));
+  (e.Stack Number) '+' = (e.Stack Number ('+'));
+  (e.Stack Number) '0' = (e.Stack Number ('0') Fraction);
+  (e.Stack Number) s.Char, <Type s.Char> : 'D' e.1 = (e.Stack Number (s.Char));
+
+  (e.Stack Number ('-')) '0' = (e.Stack Number ('-0') Fraction);
+  (e.Stack Number ('+')) '0' = (e.Stack Number ('+0') Fraction);
+  (e.Stack Number (e.Number)) s.Char, <Type s.Char> : 'D' e.1 = (e.Stack Number (e.Number s.Char));
+  (e.Stack Number (e.Number)) s.Char = (e.Stack Number (e.Number) Fraction) s.Char;
+
+  (e.Stack Fraction) '.' = (e.Stack Fraction ());
+  (e.Stack Fraction) s.Char = (e.Stack () Exponent) s.Char;
+  (e.Stack Fraction (e.Fraction)) s.Char, <Type s.Char> : 'D' e.1 = (e.Stack Fraction (e.Fraction s.Char));
+  (e.Stack Fraction (e.Fraction)) s.Char = (e.Stack (e.Fraction) Exponent) s.Char;
+
+  (e.Stack Exponent) 'E' = (e.Stack Exponent ());
+  (e.Stack Exponent) 'e' = (e.Stack Exponent ());
+  (e.Stack Exponent) s.Char = (e.Stack ()) s.Char;
+  (e.Stack Exponent ()) '-' = (e.Stack Exponent ('-'));
+  (e.Stack Exponent ()) '+' = (e.Stack Exponent ('+'));
+  (e.Stack Exponent (e.Exponent)) s.Char, <Type s.Char> : 'D' e.1 = (e.Stack Exponent (e.Exponent s.Char));
+  (e.Stack Exponent (e.Exponent)) s.Char = (e.Stack (e.Exponent)) s.Char;
+
+  (e.Stack Number (e.Number) (e.Fraction) (e.Exponent)) s.Char =
+    (e.Stack (Number (<Numb e.Number>) (<Numb e.Fraction>) (<Numb e.Exponent>))) s.Char;
+
+* object
+  (e.Stack Object) '{' = (e.Stack Object ());
+
+  (e.Stack Object (e.Members)) s.Char, <IsWs s.Char> : True = (e.Stack Object (e.Members));
+
+  (e.Stack Object ()) '"' = (e.Stack Object () String) '"';
+  (e.Stack Object (e.Members)) ',' = (e.Stack Object (e.Members) String);
+
+  (e.Stack Object (e.Members) t.String) s.Char, <IsWs s.Char> : True = (e.Stack Object (e.Members) t.String);
+  (e.Stack Object (e.Members) t.String) ':' = (e.Stack Object (e.Members) t.String Element);
+
+  (e.Stack Object (e.Members) t.String t.Value) s.Char = (e.Stack Object (e.Members (t.String t.Value))) s.Char;
+
+  (e.Stack Object (e.Members)) '}' = (e.Stack (Object e.Members));
+
+* array
+  (e.Stack Array) '[' = (e.Stack Array ());
+
+  (e.Stack Array (e.Elements)) s.Char, <IsWs s.Char> : True = (e.Stack Array (e.Elements));
+
+  (e.Stack Array (e.Elements)) ']' = (e.Stack (Array e.Elements));
+
+  (e.Stack Array ()) s.Char = (e.Stack Array () Element) s.Char;
+  (e.Stack Array (e.Elements)) ',' = (e.Stack Array (e.Elements) Element);
+
+  (e.Stack Array (e.Elements) t.Value) s.Char = (e.Stack Array (e.Elements t.Value)) s.Char;
+
+* end of chain
+  (Json e.Json) '$' = (e.Json);
+
+  t.Stack e.Unexpected = <Prout '[UNEXPECTED]\nStack:\n' t.Stack '\nChar: "' e.Unexpected '"'>;
+}
+
+
+IsWs {
+  ' '  = True;
+  '\n' = True;
+  '\r' = True;
+  '\t' = True;
+  s.Char = False;
+}
+
+
+Hex2Numb {
+  e.Hex = <Do-Hex2Numb 0 e.Hex>;
+}
+
+
+Do-Hex2Numb {
+  s.Int e.Hex s.H
+    , <Type s.H> : 'D' e.1
+    = <Do-Hex2Numb <Add <Mul 16 s.Int> <Numb s.H>> e.Hex>;
+
+  s.Int e.Hex s.H
+    , <Upper s.H> : s.UH
+    , ('A' 10) ('B' 11) ('C' 12) ('D' 13) ('E' 14) ('F' 15)
+    : e.H-B (s.UH s.Value) e.H-E
+    = <Do-Hex2Numb <Add <Mul 16 s.Int> s.Value> e.Hex>;
+
+  s.Int /* empty */ = s.Int;
+}
