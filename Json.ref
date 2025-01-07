@@ -1,159 +1,319 @@
 $ENTRY Json-Parse {
-  e.Content = <Json-Parse-FSM 0 (Json) e.Content '$'>;
+  e.Content
+    , <Parse-Element Success 0 0 () e.Content>
+    : {
+      Success s.Line s.Col (t.Element) /* empty */ = Success t.Element;
+      Fails e.Error = Fails e.Error;
+    };
 }
 
 
-Json-Parse-FSM {
-  s.Cursor t.Stack s.Char e.Rest, <Json-Parse-FSM-Next t.Stack s.Char> : {
-    Fails e.Error = Fails e.Error '(cursor ' s.Cursor ')';
+Parse-Element {
+  Success e.Ctx e.Content
+    = <Parse-Ws <Parse-Value <Parse-Ws Success e.Ctx e.Content>>>;
 
-    t.NewStack s.CharIgnored = <Json-Parse-FSM s.Cursor t.NewStack s.CharIgnored e.Rest>;
-
-    t.NewStack /* empty */ = <Json-Parse-FSM <Add 1 s.Cursor> t.NewStack e.Rest>;
-  };
-  s.Cursor (e.Json) /* empty */ = Success e.Json;
+  Fails e.Error = Fails e.Error;
 }
 
 
-Json-Parse-FSM-Next {
-* json
-  (Json) s.Char = (Json Element) s.Char;
+Parse-Value {
+  Success s.Line s.Col t.Stack '{' e.Content = <Parse-Object Success s.Line s.Col t.Stack '{' e.Content>;
 
-* element
-  (e.Stack Element) s.Char, <IsWs s.Char> : True = (e.Stack Element);
-  (e.Stack Element) s.Char = (e.Stack Element Value) s.Char;
-  (e.Stack Element (e.Value)) s.Char, <IsWs s.Char> : True = (e.Stack Element (e.Value));
-  (e.Stack Element (e.Value)) s.Char = (e.Stack (e.Value)) s.Char;  /* element end */
+  Success s.Line s.Col t.Stack '[' e.Content = <Parse-Array Success s.Line s.Col t.Stack '[' e.Content>;
 
-* value
-  (e.Stack Value) 'n' = (e.Stack Value Null) 'n';
-  (e.Stack Value) 't' = (e.Stack Value True) 't';
-  (e.Stack Value) 'f' = (e.Stack Value False) 'f';
-  (e.Stack Value) '"' = (e.Stack Value String) '"';
-  (e.Stack Value) '-' = (e.Stack Value Number) '-';
-  (e.Stack Value) '+' = (e.Stack Value Number) '-';
-  (e.Stack Value) s.Char, <Type s.Char> : 'D' e.1 = (e.Stack Value Number) s.Char;
-  (e.Stack Value) '{' = (e.Stack Value Object) '{';
-  (e.Stack Value) '[' = (e.Stack Value Array) '[';
-  (e.Stack Value) s.Char = Fails 'Unexpected JSON value';
-  (e.Stack Value (e.Value)) s.Char = (e.Stack (e.Value)) s.Char;  /* value end */
+  Success s.Line s.Col t.Stack '"' e.Content = <Parse-String Success s.Line s.Col t.Stack '"' e.Content>;
 
-* null
-  (e.Stack Null      ) 'n' = (e.Stack Null 'n');
-  (e.Stack Null 'n'  ) 'u' = (e.Stack Null 'nu');
-  (e.Stack Null 'nu' ) 'l' = (e.Stack Null 'nul');
-  (e.Stack Null 'nul') 'l' = (e.Stack (Null)); /* null end */
-
-* true
-  (e.Stack True      ) 't' = (e.Stack True 't');
-  (e.Stack True 't'  ) 'r' = (e.Stack True 'tr');
-  (e.Stack True 'tr' ) 'u' = (e.Stack True 'tru');
-  (e.Stack True 'tru') 'e' = (e.Stack (True)); /* true end */
-
-* false
-  (e.Stack False       ) 'f' = (e.Stack False 'f');
-  (e.Stack False 'f'   ) 'a' = (e.Stack False 'fa');
-  (e.Stack False 'fa'  ) 'l' = (e.Stack False 'fal');
-  (e.Stack False 'fal' ) 's' = (e.Stack False 'fals');
-  (e.Stack False 'fals') 'e' = (e.Stack (False)); /* false end */
-
-* string
-  (e.Stack String) '"' = (e.Stack String ());
-  (e.Stack String (e.String)) '"' = (e.Stack (String e.String)); /* string end */
-  (e.Stack String (e.String)) s.Char, <Compare <Ord s.Char> <Ord '\x20'>> : '-' = Fails 'Bad character';
-  (e.Stack String (e.String)) '\\' = (e.Stack String (e.String) Escape);
-
-  (e.Stack String (e.String) Escape) '"'  = (e.Stack String (e.String '"'));
-  (e.Stack String (e.String) Escape) '\\' = (e.Stack String (e.String '\\'));
-  (e.Stack String (e.String) Escape) '/'  = (e.Stack String (e.String '/'));
-  (e.Stack String (e.String) Escape) 'b'  = (e.Stack String (e.String '\x08'));
-  (e.Stack String (e.String) Escape) 'f'  = (e.Stack String (e.String '\x0C'));
-  (e.Stack String (e.String) Escape) 'n'  = (e.Stack String (e.String '\n'));
-  (e.Stack String (e.String) Escape) 'r'  = (e.Stack String (e.String '\r'));
-  (e.Stack String (e.String) Escape) 't'  = (e.Stack String (e.String '\t'));
-
-  (e.Stack Escape) 'u' = (e.Stack Unicode ());
-
-  (e.Stack String (e.String) Unicode (e.U)) s.Char
+  Success s.Line s.Col t.Stack '-' e.Content = <Parse-Number Success s.Line s.Col t.Stack '-' e.Content>;
+  Success s.Line s.Col t.Stack s.Char e.Content
     , <Type s.Char> : 'D' e.1
-    = (e.Stack String (e.String) Unicode (e.U s.Char));
+    = <Parse-Number Success s.Line s.Col t.Stack s.Char e.Content>;
 
-  (e.Stack String (e.String) Unicode (e.U)) s.Char
-    , <Upper s.Char> : s.UChar
-    , 'ABCDEF' : e.H-B s.UChar e.H-E
-    = (e.Stack String (e.String) Unicode (e.U s.Char));
+  Success s.Line s.Col (e.Stack) 'true' e.Content
+    = Success s.Line <Add 4 s.Col> (e.Stack True) e.Content;
 
-  (e.Stack String (e.String) Unicode (s.U0 s.U1 s.U2 s.U3)) s.Char
-    = (e.Stack String (e.String <Chr <Hex2Numb s.U0 s.U1 s.U2 s.U3>>)) s.Char; /* unicode end */
+  Success s.Line s.Col (e.Stack) 'false' e.Content
+    = Success s.Line <Add 5 s.Col> (e.Stack False) e.Content;
 
-  (e.Stack String (e.String)) s.Char = (e.Stack String (e.String s.Char));
+  Success s.Line s.Col (e.Stack) 'null' e.Content
+    = Success s.Line <Add 4 s.Col> (e.Stack Null) e.Content;
 
-* number
-  (e.Stack Number) '-' = (e.Stack Number ('-'));
-  (e.Stack Number) '+' = (e.Stack Number ('+'));
-  (e.Stack Number) '0' = (e.Stack Number ('0') Fraction); /* integer end */
-  (e.Stack Number) s.Char, <Type s.Char> : 'D' e.1 = (e.Stack Number (s.Char));
-  (e.Stack Number ('-')) '0' = (e.Stack Number ('-0') Fraction); /* integer end */
-  (e.Stack Number ('+')) '0' = (e.Stack Number ('+0') Fraction); /* integer end */
-  (e.Stack Number (e.Number)) s.Char, <Type s.Char> : 'D' e.1 = (e.Stack Number (e.Number s.Char));
-  (e.Stack Number (e.Number)) s.Char = (e.Stack Number (e.Number) Fraction) s.Char; /* integer end */
+  Success s.Line s.Col t.Stack s.Char e.Content = Fails s.Line s.Col 'Value was expected';
 
-  (e.Stack Fraction) '.' = (e.Stack Fraction ());
-  (e.Stack Fraction) s.Char = (e.Stack () Exponent) s.Char; /* fraction end */
-  (e.Stack Fraction (e.Fraction)) s.Char, <Type s.Char> : 'D' e.1 = (e.Stack Fraction (e.Fraction s.Char));
-  (e.Stack Fraction (e.Fraction)) s.Char = (e.Stack (e.Fraction) Exponent) s.Char; /* fraction end */
+  Fails e.Error = Fails e.Error;
+}
 
-  (e.Stack Exponent) 'E' = (e.Stack Exponent ());
-  (e.Stack Exponent) 'e' = (e.Stack Exponent ());
-  (e.Stack Exponent) s.Char = (e.Stack ()) s.Char; /* exponent end */
-  (e.Stack Exponent ()) '-' = (e.Stack Exponent ('-'));
-  (e.Stack Exponent ()) '+' = (e.Stack Exponent ('+'));
-  (e.Stack Exponent (e.Exponent)) s.Char, <Type s.Char> : 'D' e.1 = (e.Stack Exponent (e.Exponent s.Char));
-  (e.Stack Exponent (e.Exponent)) s.Char = (e.Stack (e.Exponent)) s.Char; /* exponent end */
 
-  (e.Stack Number (e.Number) (e.Fraction) (e.Exponent)) s.Char =
-    (e.Stack (Number (<Numb e.Number>) (<Numb e.Fraction>) (<Numb e.Exponent>))) s.Char; /* number end */
+Parse-Object {
+  Success s.Line s.Col t.Stack '{' e.Content
+    , <Parse-Ws Success s.Line <Inc s.Col> t.Stack e.Content>
+    : Success s.NewLine s.NewCol (e.NewStack) '}' e.NewContent
+    = Success s.NewLine <Inc s.NewCol> (e.NewStack (Object /* empty */)) e.NewContent;
 
-* object
-  (e.Stack Object) '{' = (e.Stack Object ());
-  (e.Stack Object (e.Members)) '}' = (e.Stack (Object e.Members)); /* object end */
+  Success s.Line s.Col (e.Stack) '{' e.Content
+    , <Parse-Members Success s.Line <Inc s.Col> (e.Stack ()) e.Content>
+    : {
+      Success s.NewLine s.NewCol (e.NewStack (e.Members)) '}' e.NewContent
+        = Success s.NewLine <Inc s.NewCol> (e.NewStack (Object e.Members)) e.NewContent;
 
-  (e.Stack Object (e.Members)) s.Char, <IsWs s.Char> : True = (e.Stack Object (e.Members));
+      Success s.NewLine s.NewCol t.Stack e.NewContent
+        = Fails s.NewLine s.NewCol 'Closing curly brace was expected at the end of the object';
 
-  (e.Stack Object ()) '"' = (e.Stack Object () String) '"';
-  (e.Stack Object (e.Members)) ',' = (e.Stack Object (e.Members) String);
+      Fails e.Error = Fails e.Error;
+    };
 
-  (e.Stack Object (e.Members) t.String) s.Char, <IsWs s.Char> : True = (e.Stack Object (e.Members) t.String);
-  (e.Stack Object (e.Members) t.String) ':' = (e.Stack Object (e.Members) t.String Element);
+  Success s.Line s.Col t.Stack e.Content
+    = Fails s.Line s.Col 'Opening curly brace was expected at the beginning of the object';
 
-  (e.Stack Object (e.Members) t.String t.Value) s.Char =
-    (e.Stack Object (e.Members (t.String t.Value))) s.Char; /* member end */
+  Fails e.Error = Fails e.Error;
+}
 
-* array
-  (e.Stack Array) '[' = (e.Stack Array ());
-  (e.Stack Array (e.Elements)) ']' = (e.Stack (Array e.Elements)); /* array end */
 
-  (e.Stack Array (e.Elements)) s.Char, <IsWs s.Char> : True = (e.Stack Array (e.Elements));
+Parse-Members {
+  Success s.Line s.Col t.Stack e.Content
+    , <Parse-Member Success s.Line s.Col t.Stack e.Content>
+    : {
+      Success s.NewLine s.NewCol (e.NewStack (e.Members) t.Member) ',' e.NewContent
+        = <Parse-Members Success s.NewLine <Inc s.NewCol> (e.NewStack (e.Members t.Member)) e.NewContent>;
 
-  (e.Stack Array ()) s.Char = (e.Stack Array () Element) s.Char;
-  (e.Stack Array (e.Elements)) ',' = (e.Stack Array (e.Elements) Element);
+      Success s.NewLine s.NewCol (e.NewStack (e.Members) t.Member) e.NewContent
+        = Success s.NewLine s.NewCol (e.NewStack (e.Members t.Member)) e.NewContent;
 
-  (e.Stack Array (e.Elements) t.Value) s.Char = (e.Stack Array (e.Elements t.Value)) s.Char;
+      Fails e.Error = Fails e.Error;
+    };
 
-* end of chain
-  (Json e.Json) '$' = (e.Json);
+  Fails e.Error = Fails e.Error;
+}
 
-* unexpected
-  t.Stack s.Char = Fails 'Unexpected character: "' s.Char '"';
+
+Parse-Member {
+  Success s.Line s.Col t.Stack e.Content
+    , <Parse-Ws <Parse-String <Parse-Ws Success s.Line s.Col t.Stack e.Content>>>
+    : {
+      Success s.NewLine s.NewCol t.NewStack ':' e.NewContent
+        , <Parse-Element Success s.NewLine <Inc s.NewCol> t.NewStack e.NewContent>
+        : {
+          Success s.NewNewLine s.NewNewCol (e.NewNewStack t.String t.Value) e.NewNewContent
+            = Success s.NewNewLine s.NewNewCol (e.NewNewStack (t.String t.Value)) e.NewNewContent;
+
+          Fails e.Error = Fails e.Error;
+        };
+
+      Success s.NewLine s.NewCol t.NewStack e.NewContent
+        = Fails s.NewLine s.NewCol 'Semicolon was expected after an object key';
+
+      Fails e.Error = Fails e.Error;
+    };
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Array {
+  Success s.Line s.Col t.Stack '[' e.Content
+    , <Parse-Ws Success s.Line <Inc s.Col> t.Stack e.Content>
+    : Success s.NewLine s.NewCol (e.NewStack) ']' e.NewContent
+    = Success s.NewLine <Inc s.NewCol> (e.NewStack (Array /* empty */)) e.NewContent;
+
+  Success s.Line s.Col (e.Stack) '[' e.Content
+    , <Parse-Elements Success s.Line <Inc s.Col> (e.Stack ()) e.Content>
+    : {
+      Success s.NewLine s.NewCol (e.NewStack (e.Elements)) ']' e.NewContent
+        = Success s.NewLine <Inc s.NewCol> (e.NewStack (Array e.Elements)) e.NewContent;
+
+      Success s.NewLine s.NewCol t.Stack e.NewContent
+        = Fails s.NewLine s.NewCol 'Closing square bracket was expected at the end of the array';
+
+      Fails e.Error = Fails e.Error;
+    };
+
+  Success s.Line s.Col t.Stack e.Content
+    = Fails s.Line s.Col 'Opening square bracket was expected at the beginning of the array';
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Elements {
+  Success s.Line s.Col t.Stack e.Content
+    , <Parse-Element Success s.Line s.Col t.Stack e.Content>
+    : {
+      Success s.NewLine s.NewCol (e.NewStack (e.Elements) t.Element) ',' e.NewContent
+        = <Parse-Elements Success s.NewLine <Inc s.NewCol> (e.NewStack (e.Elements t.Element)) e.NewContent>;
+
+      Success s.NewLine s.NewCol (e.NewStack (e.Elements) t.Element) e.NewContent
+        = Success s.NewLine s.NewCol (e.NewStack (e.Elements t.Element)) e.NewContent;
+
+      Fails e.Error = Fails e.Error;
+    };
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-String {
+  Success s.Line s.Col (e.Stack) '"' e.Content
+    , <Parse-Characters Success s.Line <Inc s.Col> (e.Stack ()) e.Content>
+    : {
+      Success s.NewLine s.NewCol (e.NewStack (e.Characters)) '"' e.NewContent
+        = Success s.NewLine <Inc s.NewCol> (e.NewStack (String e.Characters)) e.NewContent;
+
+      Success s.NewLine s.NewCol t.NewStack e.NewContent
+        = Fails s.NewLine s.NewCol 'Quote was expected at the end of a string';
+
+      Fails e.Error = Fails e.Error;
+    };
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Characters {
+  Success s.Line s.Col t.Stack '"' e.Content
+    = Success s.Line s.Col t.Stack '"' e.Content;
+
+  Success s.Line s.Col t.Stack e.Content
+    , <Parse-Character Success s.Line s.Col t.Stack e.Content>
+    : {
+      Success s.NewLine s.NewCol (e.NewStack (e.Characters) s.Character) e.NewContent
+        = <Parse-Characters Success s.NewLine s.NewCol (e.NewStack (e.Characters s.Character)) e.NewContent>;
+
+      Fails e.Error = Fails e.Error;
+    };
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Character {
+  Success s.Line s.Col t.Stack s.Char e.Content
+    , <Compare <Ord s.Char> <Ord '\x20'>> : '-'
+    = Fails s.Line s.Col 'Character is not in the permitted range u0020-u10FFFF';
+
+  Success s.Line s.Col t.Stack '"' e.Content
+    = Fails s.Line s.Col 'Unescaped quote character';
+
+  Success s.Line s.Col (e.Stack) '\\u' s.U3 s.U2 s.U1 s.U0 e.Content
+    = Success s.Line <Add 6 s.Col> (e.Stack <Chr <Hex2Numb s.U3 s.U2 s.U1 s.U0>>) e.Content;
+
+  Success s.Line s.Col (e.Stack) '\\u' e.Content
+    = Fails 'Wrong unicode character format';
+
+  Success s.Line s.Col (e.Stack) '\\' s.Char e.Content
+    , s.Char
+    : {
+      '"'    = Success s.Line <Add 2 s.Col> (e.Stack '"'   ) e.Content;
+      '\\'   = Success s.Line <Add 2 s.Col> (e.Stack '\\'  ) e.Content;
+      '/'    = Success s.Line <Add 2 s.Col> (e.Stack '/'   ) e.Content;
+      'b'    = Success s.Line <Add 2 s.Col> (e.Stack '\x08') e.Content;
+      'f'    = Success s.Line <Add 2 s.Col> (e.Stack '\x0C') e.Content;
+      'n'    = Success s.Line <Add 2 s.Col> (e.Stack '\n'  ) e.Content;
+      'r'    = Success s.Line <Add 2 s.Col> (e.Stack '\r'  ) e.Content;
+      't'    = Success s.Line <Add 2 s.Col> (e.Stack '\t'  ) e.Content;
+      s.Char = Success s.Line <Add 2 s.Col> (e.Stack s.Char) e.Content;
+    };
+
+  Success s.Line s.Col (e.Stack) s.Char e.Content
+    = Success s.Line <Inc s.Col> (e.Stack s.Char) e.Content;
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Number {
+  Success s.Line s.Col t.Stack e.Content
+    , <Parse-Exponent <Parse-Fraction <Parse-Integer Success s.Line s.Col t.Stack e.Content>>>
+    : {
+      Success s.NewLine s.NewCol (e.NewStack (e.Integer) (e.Fraction) (e.Exponent)) e.NewContent
+        = Success s.NewLine s.NewCol (e.NewStack (Number (<Numb e.Integer>) (<Numb e.Fraction>) (<Numb e.Exponent>))) e.NewContent;
+
+      Fails e.Error = Fails e.Error;
+    };
+
+    Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Integer {
+  Success s.Line s.Col (e.Stack) '-' '0' e.Content
+    = Success s.Line <Add 2 s.Col> (e.Stack ('-' '0')) e.Content;
+
+  Success s.Line s.Col (e.Stack) '-' e.Content
+    = <Parse-Digits Success s.Line <Inc s.Col> (e.Stack ('-')) e.Content>;
+
+  Success s.Line s.Col (e.Stack) '0' e.Content
+    = Success s.Line <Inc s.Col> (e.Stack ('0')) e.Content;
+
+  Success s.Line s.Col (e.Stack) e.Content
+    = <Parse-Digits Success s.Line s.Col (e.Stack ()) e.Content>;
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Fraction {
+  Success s.Line s.Col (e.Stack) '.' s.Char e.Content
+    , <Type s.Char> : 'D' e.1
+    = <Parse-Digits Success s.Line <Inc s.Col> (e.Stack ()) s.Char e.Content>;
+
+  Success s.Line s.Col (e.Stack) e.Content
+    = Success s.Line s.Col (e.Stack ()) e.Content;
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Exponent {
+  Success s.Line s.Col (e.Stack) s.E '+' e.Content
+    , <Upper s.E> : 'E'
+    = <Parse-Digits Success s.Line <Inc s.Col> (e.Stack ('+')) e.Content>;
+
+  Success s.Line s.Col (e.Stack) s.E '-' e.Content
+    , <Upper s.E> : 'E'
+    = <Parse-Digits Success s.Line <Inc s.Col> (e.Stack ('-')) e.Content>;
+
+  Success s.Line s.Col (e.Stack) s.E s.Char e.Content
+    , <Upper s.E> : 'E'
+    , <Type s.Char> : 'D' e.1
+    = <Parse-Digits Success s.Line s.Col (e.Stack ()) s.Char e.Content>;
+
+  Success s.Line s.Col (e.Stack) e.Content
+    = Success s.Line s.Col (e.Stack ()) e.Content;
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Digits {
+  Success s.Line s.Col (e.Stack (e.Digits)) s.Char e.Content
+    , <Type s.Char> : 'D' e.1
+    = <Parse-Digits Success s.Line <Inc s.Col> (e.Stack (e.Digits s.Char)) e.Content>;
+
+  Success s.Line s.Col (e.Stack (/* empty */)) e.Content
+    = Fails s.Line s.Col 'At least one digit is required';
+
+  Success s.Line s.Col t.Stack e.Content
+    = Success s.Line s.Col t.Stack e.Content;
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Ws {
+  Success s.Line s.Col t.Stack ' '  e.Content = <Parse-Ws Success s.Line <Inc s.Col> t.Stack e.Content>;
+  Success s.Line s.Col t.Stack '\t' e.Content = <Parse-Ws Success s.Line <Inc s.Col> t.Stack e.Content>;
+  Success s.Line s.Col t.Stack '\r' e.Content = <Parse-Ws Success <Inc s.Line> 0 t.Stack e.Content>;
+  Success s.Line s.Col t.Stack '\n' e.Content = <Parse-Ws Success <Inc s.Line> 0 t.Stack e.Content>;
+  Success s.Line s.Col t.Stack      e.Content = Success s.Line s.Col t.Stack e.Content;
+  Fails e.Error = Fails e.Error;
 }
 
 
 $ENTRY Json-Stringify {
-  (Null) = 'null';
+  Null = 'null';
 
-  (True) = 'true';
+  True = 'true';
 
-  (False) = 'false';
+  False = 'false';
 
   (String e.String) = '"' <Escape e.String> '"';
 
@@ -173,12 +333,8 @@ $ENTRY Json-Stringify {
 }
 
 
-IsWs {
-  ' '  = True;
-  '\n' = True;
-  '\r' = True;
-  '\t' = True;
-  s.Char = False;
+Inc {
+  s.A = <Add 1 s.A>;
 }
 
 
@@ -198,7 +354,7 @@ Do-Hex2Numb {
     : e.H-B (s.UH s.Value) e.H-E
     = <Do-Hex2Numb <Add <Mul 16 s.Int> s.Value> e.Hex>;
 
-  s.Int /* empty */ = s.Int;
+  s.Int = s.Int;
 }
 
 
