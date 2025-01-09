@@ -1,4 +1,4 @@
 **/*.c
-./test/run_output.json
-./test/run
-./example
+test/run_output.json
+test/run
+example
