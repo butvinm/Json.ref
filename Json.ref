@@ -1,3 +1,20 @@
+/**
+<Json-Parse s.CHAR*> == Success t.Json | Fails s.Line s.Col e.Error
+
+t.Json ::= t.Value
+t.Value ::=
+    t.Object | t.Array |
+    t.String | t.Number |
+    True | False | Null
+
+t.Object ::= (Object (t.String t.Value)*)
+t.Array ::= (Array t.Value*)
+t.String ::= (String s.CHAR*)
+t.Number ::= (Number (s.Integer) (s.Fraction?) (s.Exponent?))
+s.Integer ::= '-'? s.NUMBER
+s.Fraction ::= '-'? s.NUMBER
+s.Exponent ::= '-'? s.NUMBER
+*/
 $ENTRY Json-Parse {
   e.Content
     , <Parse-Element Success 0 0 () e.Content>
@@ -5,6 +22,34 @@ $ENTRY Json-Parse {
       Success s.Line s.Col (t.Element) /* empty */ = Success t.Element;
       Fails e.Error = Fails e.Error;
     };
+}
+
+
+/**
+<Json-Stringify t.Json> == s.CHAR*
+*/
+$ENTRY Json-Stringify {
+  Null = 'null';
+
+  True = 'true';
+
+  False = 'false';
+
+  (String e.String) = '"' <Escape e.String> '"';
+
+  (Number (e.Integer) (/* empty */) (/* empty */)) = <Symb e.Integer>;
+
+  (Number (e.Integer) (/* empty */) (e.Exponent )) = <Symb e.Integer> 'e' <Symb e.Exponent>;
+
+  (Number (e.Integer) (e.Fraction ) (/* empty */)) = <Symb e.Integer> '.' <Symb e.Fraction>;
+
+  (Number (e.Integer) (e.Fraction ) (e.Exponent )) = <Symb e.Integer> '.' <Symb e.Fraction> 'e' <Symb e.Exponent>;
+
+  (Object e.Members) = '{' <MapJoin Json-Stringify ',' e.Members> '}';
+
+  (Array e.Elements) = '[' <MapJoin Json-Stringify ',' e.Elements> ']';
+
+  (t.Key t.Value) = <Json-Stringify t.Key> ':' <Json-Stringify t.Value>;
 }
 
 
@@ -305,31 +350,6 @@ Parse-Ws {
   Success s.Line s.Col t.Stack '\n' e.Content = <Parse-Ws Success <Inc s.Line> 0 t.Stack e.Content>;
   Success s.Line s.Col t.Stack      e.Content = Success s.Line s.Col t.Stack e.Content;
   Fails e.Error = Fails e.Error;
-}
-
-
-$ENTRY Json-Stringify {
-  Null = 'null';
-
-  True = 'true';
-
-  False = 'false';
-
-  (String e.String) = '"' <Escape e.String> '"';
-
-  (Number (e.Integer) (/* empty */) (/* empty */)) = <Symb e.Integer>;
-
-  (Number (e.Integer) (/* empty */) (e.Exponent )) = <Symb e.Integer> 'e' <Symb e.Exponent>;
-
-  (Number (e.Integer) (e.Fraction ) (/* empty */)) = <Symb e.Integer> '.' <Symb e.Fraction>;
-
-  (Number (e.Integer) (e.Fraction ) (e.Exponent )) = <Symb e.Integer> '.' <Symb e.Fraction> 'e' <Symb e.Exponent>;
-
-  (Object e.Members) = '{' <MapJoin Json-Stringify ',' e.Members> '}';
-
-  (Array e.Elements) = '[' <MapJoin Json-Stringify ',' e.Elements> ']';
-
-  (t.Key t.Value) = <Json-Stringify t.Key> ':' <Json-Stringify t.Value>;
 }
 
 
