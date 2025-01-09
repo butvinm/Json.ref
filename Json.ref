@@ -224,7 +224,7 @@ Parse-Number {
     , <Parse-Exponent <Parse-Fraction <Parse-Integer Success s.Line s.Col t.Stack e.Content>>>
     : {
       Success s.NewLine s.NewCol (e.NewStack (e.Integer) (e.Fraction) (e.Exponent)) e.NewContent
-        = Success s.NewLine s.NewCol (e.NewStack (Number (<Numb e.Integer>) (<Numb e.Fraction>) (<Numb e.Exponent>))) e.NewContent;
+        = Success s.NewLine s.NewCol (e.NewStack (Number (<Numb e.Integer>) <NumbOptional e.Fraction> <NumbOptional e.Exponent>)) e.NewContent;
 
       Fails e.Error = Fails e.Error;
     };
@@ -376,4 +376,10 @@ Escape {
   '\t' e.String = '\\t' <Escape e.String>;
   s.Char e.String = s.Char <Escape e.String>;
   /* empty */ = /* empty */;
+}
+
+
+NumbOptional {
+  /* empty */ = (/* empty */);
+  e.Numb = (<Numb e.Numb>);
 }
