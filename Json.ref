@@ -82,7 +82,7 @@ Parse-Value {
   Success s.Line s.Col (e.Stack) 'null' e.Content
     = Success s.Line <Add 4 s.Col> (e.Stack Null) e.Content;
 
-  Success s.Line s.Col t.Stack s.Char e.Content = Fails s.Line s.Col 'Value was expected';
+  Success s.Line s.Col t.Stack e.Content = Fails s.Line s.Col 'Value was expected';
 
   Fails e.Error = Fails e.Error;
 }

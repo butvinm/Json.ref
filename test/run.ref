@@ -9,9 +9,11 @@ $ENTRY Go {
   , <ArgList> : {
     (e.Exe) (e.File)
       , <UnwrapLines <LoadFile e.File>> : e.Content
-      , <Json-Parse e.Content> : Success t.Json
-      , <Json-Stringify t.Json> : e.JsonString
-      = <Print e.JsonString>;
+      , <Json-Parse e.Content>
+      : {
+        Success t.Json = <Print <Json-Stringify t.Json>>;
+        Fails e.Error = <Print e.Error>;
+      };
 
     e.Wtf
       = <Prout 'Usage: test file.json'>;
