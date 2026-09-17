@@ -18,7 +18,10 @@ $ENTRY Go {
       , <Json-Parse e.Content>
       : {
         Success t.Json = <Print <Json-Stringify t.Json>>;
-        Fails e.Error = <Print e.Error>;
+
+        Fails e.Error
+            = <Print e.Error> 
+              <Exit 2>;
       };
 
     (e.Exe) e.Wtf

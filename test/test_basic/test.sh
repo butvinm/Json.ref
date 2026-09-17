@@ -68,7 +68,8 @@ for input_file in "${inputs[@]}"; do
     "$test_dir/run" "$input_file" > "$actual_file" 2> "$tmp_dir/$filename.stderr"
     exit_code=$?
 
-    if [[ $exit_code -ne 0 ]]; then
+    # 0 is a parsed file, 2 is a reported parse error, both print something to compare
+    if [[ $exit_code -ne 0 && $exit_code -ne 2 ]]; then
         errors+=("$input_file")
         error_messages+=("runner exited with code $exit_code")
         report "$input_file" ERROR "$red"
