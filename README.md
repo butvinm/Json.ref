@@ -19,3 +19,8 @@ make test
 ## License
 
 [MIT](LICENSE)
+
+## References
+
+- [Refal-05](https://github.com/Mazdaywik/Refal-05)
+- [ECMA-404 The JSON data interchange syntax](https://ecma-international.org/publications-and-standards/standards/ecma-404/)
