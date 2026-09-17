@@ -2,3 +2,4 @@
 test/run_output.json
 test/run
 example
+*.dSYM

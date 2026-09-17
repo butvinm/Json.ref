@@ -2,9 +2,6 @@
 
 set -e
 
-export R05CCOMP="clang -o test/run"
-refal05c test/run Json Library LibraryEx refal05rts
-
 failed=0
 for input_file in ./test/in/*.json; do
     filename=$(basename "$input_file" .json)
