@@ -21,7 +21,7 @@ $ENTRY Json-Parse {
     : {
       Success s.Line s.Col (t.Element) /* empty */ = Success t.Element;
 
-      Success s.Line s.Col (t.Element) e.Wtf = Fails s.Line s.Col 'EOF was expected at the end of a root element';
+      Success s.Line s.Col (t.Element) e.Wtf = Fails s.Line s.Col 'Expected end of input after the root value';
 
       Fails e.Error = Fails e.Error;
     };
@@ -85,7 +85,7 @@ Parse-Value {
   Success s.Line s.Col (e.Stack) 'null' e.Content
     = Success s.Line <Add 4 s.Col> (e.Stack Null) e.Content;
 
-  Success s.Line s.Col t.Stack e.Content = Fails s.Line s.Col 'Value was expected';
+  Success s.Line s.Col t.Stack e.Content = Fails s.Line s.Col 'Expected a value';
 
   Fails e.Error = Fails e.Error;
 }
@@ -104,13 +104,13 @@ Parse-Object {
         = Success s.NewLine <Inc s.NewCol> (e.NewStack (Object e.Members)) e.NewContent;
 
       Success s.NewLine s.NewCol t.Stack e.NewContent
-        = Fails s.NewLine s.NewCol 'Closing curly brace was expected at the end of the object';
+        = Fails s.NewLine s.NewCol 'Expected \'}\' at the end of an object';
 
       Fails e.Error = Fails e.Error;
     };
 
   Success s.Line s.Col t.Stack e.Content
-    = Fails s.Line s.Col 'Opening curly brace was expected at the beginning of the object';
+    = Fails s.Line s.Col 'Expected \'{\' at the beginning of an object';
 
   Fails e.Error = Fails e.Error;
 }
@@ -147,7 +147,7 @@ Parse-Member {
         };
 
       Success s.NewLine s.NewCol t.NewStack e.NewContent
-        = Fails s.NewLine s.NewCol 'Semicolon was expected after an object key';
+        = Fails s.NewLine s.NewCol 'Expected \':\' after an object key';
 
       Fails e.Error = Fails e.Error;
     };
@@ -169,13 +169,13 @@ Parse-Array {
         = Success s.NewLine <Inc s.NewCol> (e.NewStack (Array e.Elements)) e.NewContent;
 
       Success s.NewLine s.NewCol t.Stack e.NewContent
-        = Fails s.NewLine s.NewCol 'Closing square bracket was expected at the end of the array';
+        = Fails s.NewLine s.NewCol 'Expected \']\' at the end of an array';
 
       Fails e.Error = Fails e.Error;
     };
 
   Success s.Line s.Col t.Stack e.Content
-    = Fails s.Line s.Col 'Opening square bracket was expected at the beginning of the array';
+    = Fails s.Line s.Col 'Expected \'[\' at the beginning of an array';
 
   Fails e.Error = Fails e.Error;
 }
@@ -206,7 +206,7 @@ Parse-String {
         = Success s.NewLine <Inc s.NewCol> (e.NewStack (String e.Characters)) e.NewContent;
 
       Success s.NewLine s.NewCol t.NewStack e.NewContent
-        = Fails s.NewLine s.NewCol 'Quote was expected at the end of a string';
+        = Fails s.NewLine s.NewCol 'Expected \'"\' at the end of a string';
 
       Fails e.Error = Fails e.Error;
     };
@@ -235,16 +235,16 @@ Parse-Characters {
 Parse-Character {
   Success s.Line s.Col t.Stack s.Char e.Content
     , <Compare <Ord s.Char> <Ord '\x20'>> : '-'
-    = Fails s.Line s.Col 'Character is not in the permitted range u0020-u10FFFF';
+    = Fails s.Line s.Col 'Character is outside the permitted range U+0020-U+10FFFF';
 
   Success s.Line s.Col t.Stack '"' e.Content
-    = Fails s.Line s.Col 'Unescaped quote character';
+    = Fails s.Line s.Col 'Unescaped \'"\' in a string';
 
   Success s.Line s.Col (e.Stack) '\\u' s.U3 s.U2 s.U1 s.U0 e.Content
     = Success s.Line <Add 6 s.Col> (e.Stack <Chr <Hex2Numb s.U3 s.U2 s.U1 s.U0>>) e.Content;
 
   Success s.Line s.Col (e.Stack) '\\u' e.Content
-    = Fails 'Wrong unicode character format';
+    = Fails s.Line s.Col 'Expected 4 hex digits after \'\\u\'';
 
   Success s.Line s.Col (e.Stack) '\\' s.Char e.Content
     , s.Char
@@ -337,7 +337,7 @@ Parse-Digits {
     = <Parse-Digits Success s.Line <Inc s.Col> (e.Stack (e.Digits s.Char)) e.Content>;
 
   Success s.Line s.Col (e.Stack (/* empty */)) e.Content
-    = Fails s.Line s.Col 'At least one digit is required';
+    = Fails s.Line s.Col 'Expected a digit';
 
   Success s.Line s.Col t.Stack e.Content
     = Success s.Line s.Col t.Stack e.Content;
