@@ -14,10 +14,16 @@ t.Number ::= (Number (s.Integer) (s.Fraction?) (s.Exponent?))
 s.Integer ::= '-'? s.NUMBER
 s.Fraction ::= '-'? s.NUMBER
 s.Exponent ::= '-'? s.NUMBER
+
+s.Line ::= s.NUMBER
+s.Col ::= s.NUMBER
+  s.Line and s.Col count from 1 and point at the first character that could not be parsed.
+
+e.Error ::= s.CHAR*
 */
 $ENTRY Json-Parse {
   e.Content
-    , <Parse-Element Success 0 0 () e.Content>
+    , <Parse-Element Success 1 1 () e.Content>
     : {
       Success s.Line s.Col (t.Element) /* empty */ = Success t.Element;
 
@@ -347,11 +353,12 @@ Parse-Digits {
 
 
 Parse-Ws {
-  Success s.Line s.Col t.Stack ' '  e.Content = <Parse-Ws Success s.Line <Inc s.Col> t.Stack e.Content>;
-  Success s.Line s.Col t.Stack '\t' e.Content = <Parse-Ws Success s.Line <Inc s.Col> t.Stack e.Content>;
-  Success s.Line s.Col t.Stack '\r' e.Content = <Parse-Ws Success <Inc s.Line> 0 t.Stack e.Content>;
-  Success s.Line s.Col t.Stack '\n' e.Content = <Parse-Ws Success <Inc s.Line> 0 t.Stack e.Content>;
-  Success s.Line s.Col t.Stack      e.Content = Success s.Line s.Col t.Stack e.Content;
+  Success s.Line s.Col t.Stack ' '    e.Content = <Parse-Ws Success s.Line <Inc s.Col> t.Stack e.Content>;
+  Success s.Line s.Col t.Stack '\t'   e.Content = <Parse-Ws Success s.Line <Inc s.Col> t.Stack e.Content>;
+  Success s.Line s.Col t.Stack '\r\n' e.Content = <Parse-Ws Success <Inc s.Line> 1 t.Stack e.Content>;
+  Success s.Line s.Col t.Stack '\r'   e.Content = <Parse-Ws Success <Inc s.Line> 1 t.Stack e.Content>;
+  Success s.Line s.Col t.Stack '\n'   e.Content = <Parse-Ws Success <Inc s.Line> 1 t.Stack e.Content>;
+  Success s.Line s.Col t.Stack        e.Content = Success s.Line s.Col t.Stack e.Content;
   Fails e.Error = Fails e.Error;
 }
 
