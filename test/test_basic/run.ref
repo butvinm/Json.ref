@@ -1,3 +1,9 @@
+/**
+Parse the given JSON file and print it stringified back, or print the parse error.
+test.sh runs this for each file from ./in and compares the output with the expected one from ./out.
+*/
+
+
 *$FROM LibraryEx
 $EXTERN ArgList, LoadFile;
 
@@ -15,8 +21,9 @@ $ENTRY Go {
         Fails e.Error = <Print e.Error>;
       };
 
-    e.Wtf
-      = <Prout 'Usage: test file.json'>;
+    (e.Exe) e.Wtf
+      = <Prout 'usage: ' e.Exe ' <file.json>'>
+        <Exit 1>;
   };
 }
 
