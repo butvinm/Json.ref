@@ -2,7 +2,16 @@
 
 ## Example
 
+The Refal-05 compiler is included as a submodule and is built from source on the first `make`, so only a C compiler is required.
+
 Use the following command to build and run `example.ref`:
-```bach
-R05CCOMP="clang -o example" refal05c example Json Library refal05rts && ./example
+
+```bash
+make example && ./example
+```
+
+## Tests
+
+```bash
+make test
 ```
