@@ -27,7 +27,7 @@ test-basic: test/test_basic/run
 	./test/test_basic/test.sh
 
 clean:
-	rm -rf example example.dSYM test/test_basic/run test/test_basic/run.dSYM test/test_basic/run_output.json *.c
+	rm -rf example example.dSYM test/test_basic/run test/test_basic/run.dSYM *.c
 
 distclean: clean
 	$(MAKE) -C $(REFAL_DIR) clear
