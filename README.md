@@ -15,3 +15,7 @@ make example && ./example
 ```bash
 make test
 ```
+
+## License
+
+[MIT](LICENSE)
