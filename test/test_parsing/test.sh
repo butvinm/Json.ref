@@ -110,7 +110,7 @@ if [[ ${#failed[@]} -gt 0 ]]; then
     bar = FAILURES
     for i in "${!failed[@]}"; do
         filename=$(basename "${failed[$i]}" .json)
-        bar _ "$filename" "$red$bold"
+        bar _ "${failed[$i]}" "$red$bold"
         echo "${failed_messages[$i]}"
         [[ -s "$tmp_dir/$filename.stdout" ]] && cat "$tmp_dir/$filename.stdout"
         echo
@@ -121,7 +121,7 @@ if [[ ${#errors[@]} -gt 0 ]]; then
     bar = ERRORS
     for i in "${!errors[@]}"; do
         filename=$(basename "${errors[$i]}" .json)
-        bar _ "$filename" "$red$bold"
+        bar _ "${errors[$i]}" "$red$bold"
         echo "${error_messages[$i]}"
         grep -v '^[[:space:]]*$' "$tmp_dir/$filename.stderr" | head -n 6 | cut -c "1-$width"
         echo

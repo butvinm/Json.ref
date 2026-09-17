@@ -22,6 +22,8 @@ bar() {
     local text=" $2 "
     local left=$(( (width - ${#text}) / 2 ))
     local right=$(( width - ${#text} - left ))
+    (( left < 1 )) && left=1
+    (( right < 1 )) && right=1
     echo "${3:-}$(repeat "$1" "$left")$text$(repeat "$1" "$right")$reset"
 }
 
@@ -87,7 +89,7 @@ if [[ ${#failed[@]} -gt 0 ]]; then
     bar = FAILURES
     for input_file in "${failed[@]}"; do
         filename=$(basename "$input_file" .json)
-        bar _ "$filename" "$red$bold"
+        bar _ "$input_file" "$red$bold"
         cat "$tmp_dir/$filename.diff"
         echo
     done
@@ -97,7 +99,7 @@ if [[ ${#errors[@]} -gt 0 ]]; then
     bar = ERRORS
     for i in "${!errors[@]}"; do
         filename=$(basename "${errors[$i]}" .json)
-        bar _ "$filename" "$red$bold"
+        bar _ "${errors[$i]}" "$red$bold"
         echo "${error_messages[$i]}"
         [[ -s "$tmp_dir/$filename.stderr" ]] && cat "$tmp_dir/$filename.stderr"
         echo
