@@ -20,6 +20,9 @@ $ENTRY Json-Parse {
     , <Parse-Element Success 0 0 () e.Content>
     : {
       Success s.Line s.Col (t.Element) /* empty */ = Success t.Element;
+
+      Success s.Line s.Col (t.Element) e.Wtf = Fails s.Line s.Col 'EOF was expected at the end of a root element';
+
       Fails e.Error = Fails e.Error;
     };
 }
