@@ -5,7 +5,7 @@ R05CCOMP  ?= gcc -Wall -g
 
 LIBS := LibraryEx Platform refal05rts refal05bif Go
 
-.PHONY: all refal test test-basic clean distclean
+.PHONY: all refal test test-basic test-parsing clean distclean
 
 all: example
 
@@ -21,13 +21,19 @@ example: example.ref Json.ref $(REFAL05C)
 test/test_basic/run: test/test_basic/run.ref Json.ref $(REFAL05C)
 	R05CCOMP='$(R05CCOMP)' R05CFLAGS='-o $@' R05PATH='$(R05PATH)' $(REFAL05C) test/test_basic/run Json $(LIBS)
 
-test: test-basic
+test/test_parsing/run: test/test_parsing/run.ref Json.ref $(REFAL05C)
+	R05CCOMP='$(R05CCOMP)' R05CFLAGS='-o $@' R05PATH='$(R05PATH)' $(REFAL05C) test/test_parsing/run Json $(LIBS)
+
+test: test-basic test-parsing
 
 test-basic: test/test_basic/run
 	./test/test_basic/test.sh
 
+test-parsing: test/test_parsing/run
+	./test/test_parsing/test.sh
+
 clean:
-	rm -rf example example.dSYM test/test_basic/run test/test_basic/run.dSYM *.c
+	rm -rf example example.dSYM test/test_basic/run test/test_basic/run.dSYM test/test_parsing/run test/test_parsing/run.dSYM *.c
 
 distclean: clean
 	$(MAKE) -C $(REFAL_DIR) clear

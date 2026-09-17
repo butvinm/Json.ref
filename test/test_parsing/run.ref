@@ -1,0 +1,37 @@
+/**
+Parse the given JSON file and exit with 0, or print the parse error and exit with 2.
+test.sh runs this for each file from ./in and compares the result with the expected defined by the file name.
+*/
+
+
+*$FROM LibraryEx
+$EXTERN ArgList, LoadFile;
+
+*$FROM Json
+$EXTERN Json-Parse;
+
+
+$ENTRY Go {
+  , <ArgList> : {
+    (e.Exe) (e.File)
+      , <UnwrapLines <LoadFile e.File>> : e.Content
+      , <Json-Parse e.Content>
+      : {
+        Success t.Json = /* pass */;
+
+        Fails e.Error
+          = <Print e.Error>
+            <Exit 2>;
+      };
+
+    (e.Exe) e.Wtf
+      = <Prout 'usage: ' e.Exe ' <file.json>'>
+        <Exit 1>;
+  };
+}
+
+
+UnwrapLines {
+  (e.Line) e.Lines = e.Line '\n' <UnwrapLines e.Lines>;
+  /* empty */ = /* empty */;
+}

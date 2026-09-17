@@ -1,4 +1,5 @@
 **/*.c
 test/test_basic/run
+test/test_parsing/run
 example
 *.dSYM
