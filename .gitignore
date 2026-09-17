@@ -1,5 +1,5 @@
 **/*.c
-test/run_output.json
-test/run
+test/test_basic/run_output.json
+test/test_basic/run
 example
 *.dSYM

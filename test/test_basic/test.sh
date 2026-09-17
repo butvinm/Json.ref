@@ -2,11 +2,13 @@
 
 set -e
 
+test_dir=$(dirname "$0")
+
 failed=0
-for input_file in ./test/in/*.json; do
+for input_file in "$test_dir"/in/*.json; do
     filename=$(basename "$input_file" .json)
 
-    output_file="./test/out/$filename.json"
+    output_file="$test_dir/out/$filename.json"
 
     if [[ ! -f "$output_file" ]]; then
         echo "Output file $output_file does not exist, skipping..."
@@ -15,17 +17,17 @@ for input_file in ./test/in/*.json; do
     fi
 
     echo "Running test for $input_file..."
-    ./test/run "$input_file" > ./test/run_output.json
+    "$test_dir/run" "$input_file" > "$test_dir/run_output.json"
 
-    if diff -q ./test/run_output.json "$output_file" > /dev/null; then
+    if diff -q "$test_dir/run_output.json" "$output_file" > /dev/null; then
         echo "Test passed for $filename."
     else
         echo "Test failed for $filename. Differences:"
-        diff ./test/run_output.json "$output_file" || true
+        diff "$test_dir/run_output.json" "$output_file" || true
         failed=1
     fi
 
-    rm ./test/run_output.json
+    rm "$test_dir/run_output.json"
 done
 
 if [[ $failed -eq 1 ]]; then
