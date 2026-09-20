@@ -32,6 +32,7 @@ $ENTRY Go {
 
 
 UnwrapLines {
+  (e.Line) = e.Line;
   (e.Line) e.Lines = e.Line '\n' <UnwrapLines e.Lines>;
   /* empty */ = /* empty */;
 }
