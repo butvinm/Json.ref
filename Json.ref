@@ -241,7 +241,9 @@ Parse-String-SwCharacters {
 Parse-Characters {
   s.Line s.Col t.Stack '"' e.Content = Success s.Line s.Col t.Stack '"' e.Content;
 
-  s.Line s.Col t.Stack e.Content = <Parse-Characters-SwCharacter <Parse-Character s.Line s.Col t.Stack e.Content>>;
+  s.Line s.Col t.Stack s.Char e.Content = <Parse-Characters-SwCharacter <Parse-Character s.Line s.Col t.Stack s.Char  e.Content>>;
+
+  s.Line s.Col t.Stack /* empty */ = Fails s.Line s.Col 'Unexpected end of input in a string';
 }
 
 
@@ -260,28 +262,27 @@ Parse-Character {
 
   s.Line s.Col t.Stack '"' e.Content = Fails s.Line s.Col 'Unescaped \'"\' in a string';
 
-  s.Line s.Col t.Stack '\\u' e.Content = <Parse-Character-SwHex <Parse-Hex s.Line s.Col t.Stack '\\u' e.Content>>;
+  s.Line s.Col t.Stack '\\u' e.Content = <Parse-Hex s.Line s.Col t.Stack '\\u' e.Content>;
 
-  s.Line s.Col (e.Stack) '\\' s.Char e.Content = Success s.Line <Add 2 s.Col> (e.Stack <Unescape s.Char>) e.Content;
+  s.Line s.Col t.Stack '\\' e.Content = <Parse-Escaped s.Line s.Col t.Stack '\\' e.Content>;
 
   s.Line s.Col (e.Stack) s.Char e.Content = Success s.Line <Inc s.Col> (e.Stack s.Char) e.Content;
-}
-
-
-Parse-Character-SwHex {
-  Success s.Line s.Col (e.Stack t.Hex) e.Content = Success s.Line s.Col (e.Stack <Chr t.Hex>) e.Content;
-
-  Fails e.Error = Fails e.Error;
 }
 
 
 Parse-Hex {
   s.Line s.Col (e.Stack) '\\u' s.H0 s.H1 s.H2 s.H3 e.Content
     , <Hex2Numb s.H0 s.H1 s.H2 s.H3> : Success t.Hex
-    = Success s.Line <Add 6 s.Col> (e.Stack t.Hex) e.Content;
+    = Success s.Line <Add 6 s.Col> (e.Stack <Chr t.Hex>) e.Content;
 
-  s.Line s.Col t.Stack e.Content
-    = Fails s.Line s.Col 'Expected 4 hex digits after \'\\u\'';
+  s.Line s.Col t.Stack e.Content = Fails s.Line s.Col 'Expected 4 hex digits after \'\\u\'';
+}
+
+
+Parse-Escaped {
+  s.Line s.Col (e.Stack) '\\' s.Char e.Content = Success s.Line <Add 2 s.Col> (e.Stack <Unescape s.Char>) e.Content;
+
+  s.Line s.Col t.Stack '\\' e.Content = Fails s.Line s.Col 'Expected a char after \\';
 }
 
 
