@@ -1,6 +1,7 @@
 **/*.c
 test/test_basic/run
 test/test_parsing/run
+test/test_roundtrip/out
 example
 *.dSYM
 /.dump*.ref
