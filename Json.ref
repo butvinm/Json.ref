@@ -22,15 +22,7 @@ s.Col ::= s.NUMBER
 e.Error ::= s.CHAR*
 */
 $ENTRY Json-Parse {
-  e.Content
-    , <Parse-Element 1 1 () e.Content>
-    : {
-      Success s.Line s.Col (t.Element) /* empty */ = Success t.Element;
-
-      Success s.Line s.Col (t.Element) e.Wtf = Fails s.Line s.Col 'Expected end of input after the root value';
-
-      Fails e.Error = Fails e.Error;
-    };
+  e.Content = <Json-Parse-SwElement <Parse-Element 1 1 () e.Content>>;
 }
 
 
@@ -59,6 +51,15 @@ $ENTRY Json-Stringify {
   (Array e.Elements) = '[' <MapJoin Json-Stringify ',' e.Elements> ']';
 
   (t.Key t.Value) = <Json-Stringify t.Key> ':' <Json-Stringify t.Value>;
+}
+
+
+Json-Parse-SwElement {
+  Success s.Line s.Col (t.Element) /* empty */ = Success t.Element;
+
+  Success s.Line s.Col (t.Element) e.Wtf = Fails s.Line s.Col 'Expected end of input after the root value';
+
+  Fails e.Error = Fails e.Error;  
 }
 
 
