@@ -352,6 +352,8 @@ Parse-Digits {
 
   s.Line s.Col (e.Stack (/* empty */)) e.Content = Fails s.Line s.Col 'Expected a digit';
 
+  s.Line s.Col (e.Stack ('-')) e.Content = Fails s.Line s.Col 'Expected a digit';
+
   s.Line s.Col t.Stack e.Content = Success s.Line s.Col t.Stack e.Content;
 }
 
