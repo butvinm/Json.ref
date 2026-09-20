@@ -10,10 +10,10 @@ t.Value ::=
 t.Object ::= (Object (t.String t.Value)*)
 t.Array ::= (Array t.Value*)
 t.String ::= (String s.CHAR*)
-t.Number ::= (Number (s.Integer) (s.Fraction?) (s.Exponent?))
-s.Integer ::= '-'? s.NUMBER
-s.Fraction ::= '-'? s.NUMBER
-s.Exponent ::= '-'? s.NUMBER
+t.Number ::= (Number (e.Integer) (e.Fraction?) (e.Exponent?))
+e.Integer ::= '-'? s.NUMBER
+e.Fraction ::= '-'? s.NUMBER
+e.Exponent ::= '-'? s.NUMBER
 
 s.Line ::= s.NUMBER
 s.Col ::= s.NUMBER
@@ -353,6 +353,8 @@ Parse-Digits {
   s.Line s.Col (e.Stack (/* empty */)) e.Content = Fails s.Line s.Col 'Expected a digit';
 
   s.Line s.Col (e.Stack ('-')) e.Content = Fails s.Line s.Col 'Expected a digit';
+
+  s.Line s.Col (e.Stack ('+')) e.Content = Fails s.Line s.Col 'Expected a digit';
 
   s.Line s.Col t.Stack e.Content = Success s.Line s.Col t.Stack e.Content;
 }
