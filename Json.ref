@@ -241,7 +241,7 @@ Parse-String-SwCharacters {
 Parse-Characters {
   s.Line s.Col t.Stack '"' e.Content = Success s.Line s.Col t.Stack '"' e.Content;
 
-  s.Line s.Col t.Stack s.Char e.Content = <Parse-Characters-SwCharacter <Parse-Character s.Line s.Col t.Stack s.Char  e.Content>>;
+  s.Line s.Col t.Stack s.Char e.Content = <Parse-Characters-SwCharacter <Parse-Character s.Line s.Col t.Stack s.Char e.Content>>;
 
   s.Line s.Col t.Stack /* empty */ = Fails s.Line s.Col 'Unexpected end of input in a string';
 }
@@ -280,6 +280,10 @@ Parse-Hex {
 
 
 Parse-Escaped {
+  s.Line s.Col (e.Stack) '\\' s.Char e.Content
+    , <Compare <Ord s.Char> <Ord '\x20'>> : '-'
+    = Fails s.Line s.Col 'Character is outside the permitted range U+0020-U+10FFFF';
+
   s.Line s.Col (e.Stack) '\\' s.Char e.Content = Success s.Line <Add 2 s.Col> (e.Stack <Unescape s.Char>) e.Content;
 
   s.Line s.Col t.Stack '\\' e.Content = Fails s.Line s.Col 'Expected a char after \\';
