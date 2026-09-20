@@ -59,7 +59,7 @@ Json-Parse-SwElement {
 
   Success s.Line s.Col (t.Element) e.Wtf = Fails s.Line s.Col 'Expected end of input after the root value';
 
-  Fails e.Error = Fails e.Error;  
+  Fails e.Error = Fails e.Error;
 }
 
 
@@ -139,7 +139,7 @@ Parse-Members {
 
 
 Parse-Members-SwMember {
-  Success s.Line s.Col (e.Stack (e.Members) t.Member) ',' e.Content 
+  Success s.Line s.Col (e.Stack (e.Members) t.Member) ',' e.Content
     = <Parse-Members s.Line <Inc s.Col> (e.Stack (e.Members t.Member)) e.Content>;
 
   Success s.Line s.Col (e.Stack (e.Members) t.Member) e.Content = Success s.Line s.Col (e.Stack (e.Members t.Member)) e.Content;
@@ -260,14 +260,28 @@ Parse-Character {
 
   s.Line s.Col t.Stack '"' e.Content = Fails s.Line s.Col 'Unescaped \'"\' in a string';
 
-  s.Line s.Col (e.Stack) '\\u' s.U3 s.U2 s.U1 s.U0 e.Content
-    = Success s.Line <Add 6 s.Col> (e.Stack <Chr <Hex2Numb s.U3 s.U2 s.U1 s.U0>>) e.Content;
-
-  s.Line s.Col (e.Stack) '\\u' e.Content = Fails s.Line s.Col 'Expected 4 hex digits after \'\\u\'';
+  s.Line s.Col t.Stack '\\u' e.Content = <Parse-Character-SwHex <Parse-Hex s.Line s.Col t.Stack '\\u' e.Content>>;
 
   s.Line s.Col (e.Stack) '\\' s.Char e.Content = Success s.Line <Add 2 s.Col> (e.Stack <Unescape s.Char>) e.Content;
 
   s.Line s.Col (e.Stack) s.Char e.Content = Success s.Line <Inc s.Col> (e.Stack s.Char) e.Content;
+}
+
+
+Parse-Character-SwHex {
+  Success s.Line s.Col (e.Stack t.Hex) e.Content = Success s.Line s.Col (e.Stack <Chr t.Hex>) e.Content;
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Hex {
+  s.Line s.Col (e.Stack) '\\u' s.H0 s.H1 s.H2 s.H3 e.Content
+    , <Hex2Numb s.H0 s.H1 s.H2 s.H3> : Success t.Hex
+    = Success s.Line <Add 6 s.Col> (e.Stack t.Hex) e.Content;
+
+  s.Line s.Col t.Stack e.Content
+    = Fails s.Line s.Col 'Expected 4 hex digits after \'\\u\'';
 }
 
 
@@ -406,7 +420,9 @@ Do-Hex2Numb {
     : e.H-B (s.UH s.Value) e.H-E
     = <Do-Hex2Numb <Add <Mul 16 s.Int> s.Value> e.Hex>;
 
-  s.Int = s.Int;
+  s.Int /* empty */ = Success s.Int;
+
+  s.Int e.Bad = Fails 'Expected a hex digit';
 }
 
 
