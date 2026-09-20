@@ -55,8 +55,9 @@ shift
 # The runtime indents with one character per level and puts a "." in place of the space in every 4th column as a visual guide. Those dots are part of the indent, not Refal syntax, so they are counted as indent and dropped.
 # A section with no content, usually BURIED, is left out.
 # When the program crashes, the trace ends with a comment like /* RECOGNITION IMPOSSIBLE on step 41 */. The runtime dumps the failed step once more after that message, that copy is dropped.
+# The dump is bytes, not text: the runtime can split a multibyte character or the input can be invalid UTF-8. awk runs in the C locale so it passes such bytes through instead of warning about them.
 "$prog" "-d$step" $mode "$@" 2>&1 >/dev/null \
-  | awk '
+  | LC_ALL=C awk '
       function flush(term) { if (last != "") print last term; last = "" }
       function section(name) { pending = "  /* " name " */ ="; separate = n_sections++ > 0 }
       function close_step() { flush(""); pending = ""; if (open) print "}\n"; open = 0 }
