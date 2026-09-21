@@ -1,0 +1,38 @@
+/**
+Parse the given JSON file and print it stringified back, or print the parse error.
+test.sh runs this for each y_ file from ../test_parsing/in and gives the output to compare.py.
+*/
+
+
+*$FROM LibraryEx
+$EXTERN ArgList, LoadFile;
+
+*$FROM Json
+$EXTERN Json-Parse, Json-Stringify;
+
+
+$ENTRY Go {
+  , <ArgList> : {
+    (e.Exe) (e.File)
+      , <UnwrapLines <LoadFile e.File>> : e.Content
+      , <Json-Parse e.Content>
+      : {
+        Success t.Json = <Print <Json-Stringify t.Json>>;
+
+        Fails e.Error
+            = <Print e.Error> 
+              <Exit 2>;
+      };
+
+    (e.Exe) e.Wtf
+      = <Prout 'usage: ' e.Exe ' <file.json>'>
+        <Exit 1>;
+  };
+}
+
+
+UnwrapLines {
+  (e.Line) = e.Line;
+  (e.Line) e.Lines = e.Line '\n' <UnwrapLines e.Lines>;
+  /* empty */ = /* empty */;
+}

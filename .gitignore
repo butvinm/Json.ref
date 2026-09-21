@@ -1,7 +1,10 @@
 **/*.c
-test/test_basic/run
+test/test_basic/bin
+test/test_stringify/run
+test/test_stringify/out
 test/test_parsing/run
-test/test_roundtrip/out
+test/test_python_compat/run
+test/test_python_compat/out
 example
 *.dSYM
 /.dump*.ref

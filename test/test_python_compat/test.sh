@@ -3,7 +3,7 @@
 # Checks that a file means the same to Python before and after a round trip through Json-Parse and Json-Stringify:
 #   json.load(file) == json.load(stringify(parse(file)))
 # Inputs are the y_ files of ../test_parsing/in, the ones every parser must accept.
-# The round trip is done by the test_basic runner, which prints the parsed file stringified back.
+# The round trip is done by ./run, which prints the parsed file stringified back.
 
 test_dir=$(dirname "$0")
 test_dir=${test_dir#./}
@@ -11,7 +11,7 @@ test_dir=${test_dir#./}
 suites_dir=$(cd "$test_dir/.." && pwd)
 suites_dir=${suites_dir#"$PWD"/}
 inputs_dir="$suites_dir/test_parsing/in"
-runner="$suites_dir/test_basic/run"
+runner="$test_dir/run"
 python=${PYTHON:-python3}
 width=80
 

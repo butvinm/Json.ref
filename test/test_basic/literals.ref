@@ -1,0 +1,29 @@
+/**
+Results of Json-Parse for the literals: true, false and null.
+Eq takes the expected result in brackets and the actual one after them, the first mismatch crashes the program.
+test.sh runs every .ref file of this directory as a separate program and reports the crashed ones.
+*/
+
+
+*$FROM Json
+$EXTERN Json-Parse;
+
+
+$ENTRY Go {
+  = <Eq (Success True ) <Json-Parse 'true'>>
+    <Eq (Success False) <Json-Parse 'false'>>
+    <Eq (Success Null ) <Json-Parse 'null'>>
+
+    <Eq (Success True) <Json-Parse ' \t\r\n true \t\r\n '>>
+
+    <Eq (Fails 1 1 'Expected a value') <Json-Parse /* empty */>>
+    <Eq (Fails 1 1 'Expected a value') <Json-Parse 'True'>>
+    <Eq (Fails 1 1 'Expected a value') <Json-Parse 'tru'>>
+    <Eq (Fails 2 3 'Expected a value') <Json-Parse '\n  nul'>>
+    <Eq (Fails 1 5 'Expected end of input after the root value') <Json-Parse 'truefalse'>>;
+}
+
+
+Eq {
+  (e.Eq) e.Eq = /* pass */;
+}

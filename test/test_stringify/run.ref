@@ -1,6 +1,6 @@
 /**
 Parse the given JSON file and print it stringified back, or print the parse error.
-test.sh runs this for each file from ./in and compares the output with the expected one from ./out.
+test.sh runs this for each file from ./in and compares the output with the expected one from ./expected.
 */
 
 

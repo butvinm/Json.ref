@@ -4,7 +4,7 @@
 # Runs the program with the runtime's per-step dump enabled, strips the decorative frame lines and wraps each step in a function named Step-N. Redirect the output to a .ref file to read it with Refal highlighting in an editor.
 #
 # Usage:
-#   scripts/trace.sh [-f] [-s STEP] -- test/test_basic/run test/test_basic/in/array.json > .dump.ref
+#   scripts/trace.sh [-f] [-s STEP] -- test/test_stringify/run test/test_stringify/in/array.json > .dump.ref
 #
 #   -f       full dump: view field and buried section on every step (default: only the primary active expression)
 #   -s STEP  start dumping from this step (default: 1)
@@ -47,7 +47,7 @@ shift
 #     /* VIEW FIELD */ =
 #       <"Stop$$"
 #         <GO0
-#           ('test/test_basic/run' )
+#           ('test/test_stringify/run' )
 #           <DoArgList 1 >>>
 #   }
 #

@@ -5,7 +5,10 @@ R05CCOMP  ?= gcc -Wall -g
 
 LIBS := LibraryEx Platform refal05rts refal05bif Go
 
-.PHONY: all refal test test-basic test-parsing test-roundtrip clean distclean
+# every .ref file of test_basic is a separate test program
+BASIC_TESTS := $(patsubst test/test_basic/%.ref,test/test_basic/bin/%,$(wildcard test/test_basic/*.ref))
+
+.PHONY: all refal test test-basic test-stringify test-parsing test-python-compat clean distclean
 
 all: example
 
@@ -18,26 +21,39 @@ $(REFAL05C):
 example: example.ref Json.ref $(REFAL05C)
 	R05CCOMP='$(R05CCOMP)' R05CFLAGS='-o $@' R05PATH='$(R05PATH)' $(REFAL05C) example Json $(LIBS)
 
-test/test_basic/run: test/test_basic/run.ref Json.ref $(REFAL05C)
-	R05CCOMP='$(R05CCOMP)' R05CFLAGS='-o $@' R05PATH='$(R05PATH)' $(REFAL05C) test/test_basic/run Json $(LIBS)
+test/test_basic/bin/%: test/test_basic/%.ref Json.ref $(REFAL05C)
+	mkdir -p $(@D)
+	R05CCOMP='$(R05CCOMP)' R05CFLAGS='-o $@' R05PATH='$(R05PATH)' $(REFAL05C) test/test_basic/$* Json $(LIBS)
+
+test/test_stringify/run: test/test_stringify/run.ref Json.ref $(REFAL05C)
+	R05CCOMP='$(R05CCOMP)' R05CFLAGS='-o $@' R05PATH='$(R05PATH)' $(REFAL05C) test/test_stringify/run Json $(LIBS)
 
 test/test_parsing/run: test/test_parsing/run.ref Json.ref $(REFAL05C)
 	R05CCOMP='$(R05CCOMP)' R05CFLAGS='-o $@' R05PATH='$(R05PATH)' $(REFAL05C) test/test_parsing/run Json $(LIBS)
 
-test: test-basic test-parsing test-roundtrip
+test/test_python_compat/run: test/test_python_compat/run.ref Json.ref $(REFAL05C)
+	R05CCOMP='$(R05CCOMP)' R05CFLAGS='-o $@' R05PATH='$(R05PATH)' $(REFAL05C) test/test_python_compat/run Json $(LIBS)
 
-test-basic: test/test_basic/run
+test: test-basic test-stringify test-parsing test-python-compat
+
+test-basic: $(BASIC_TESTS)
 	./test/test_basic/test.sh
+
+test-stringify: test/test_stringify/run
+	./test/test_stringify/test.sh
 
 test-parsing: test/test_parsing/run
 	./test/test_parsing/test.sh
 
-# has no runner of its own, test_basic's one already does the round trip
-test-roundtrip: test/test_basic/run
-	./test/test_roundtrip/test.sh
+test-python-compat: test/test_python_compat/run
+	./test/test_python_compat/test.sh
 
 clean:
-	rm -rf example example.dSYM test/test_basic/run test/test_basic/run.dSYM test/test_parsing/run test/test_parsing/run.dSYM test/test_roundtrip/out *.c
+	rm -rf example example.dSYM *.c \
+		test/test_basic/bin \
+		test/test_stringify/run test/test_stringify/run.dSYM test/test_stringify/out \
+		test/test_parsing/run test/test_parsing/run.dSYM \
+		test/test_python_compat/run test/test_python_compat/run.dSYM test/test_python_compat/out
 
 distclean: clean
 	$(MAKE) -C $(REFAL_DIR) clear

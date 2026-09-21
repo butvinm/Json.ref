@@ -16,9 +16,10 @@ make example && ./example
 make test
 ```
 
-- `make test-basic` compares the parsed and stringified back files with the expected ones.
+- `make test-basic` compares the results of `Json-Parse`, both the parsed values and the parse errors, with the expected ones.
+- `make test-stringify` compares the parsed and stringified back files with the expected ones.
 - `make test-parsing` checks which files of JSONTestSuite are accepted and which are rejected.
-- `make test-roundtrip` checks that a file means the same to Python's `json` before and after a round trip through the parser, requires `python3`.
+- `make test-python-compat` checks that a file means the same to Python's `json` before and after a round trip through the parser, requires `python3`.
 
 ## License
 

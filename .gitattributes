@@ -1,2 +1,2 @@
 # Test inputs with Windows line endings must stay byte-exact.
-test/test_basic/in/*_crlf.json -text
+test/test_stringify/in/*_crlf.json -text
