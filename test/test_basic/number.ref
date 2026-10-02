@@ -1,0 +1,87 @@
+*$FROM Json
+$EXTERN Json-Parse;
+
+
+$ENTRY Go {
+  = <Eq (Success (Decimal 1 0)) <Json-Parse '1'>>
+    <Eq (Success (Decimal '-' 10 0)) <Json-Parse '-10'>>
+    <Eq (Success (Decimal 232830643 2808348672 0)) <Json-Parse '1000000000000000000'>>
+
+    <Eq (Success (Decimal 10 0)) <Json-Parse '1e1'>>
+    <Eq (Success (Decimal '-' 54 902409669 3735027712 0)) <Json-Parse '-10e+20'>>
+    <Eq (Success (Decimal 1 2)) <Json-Parse '1000000000000000000e-20'>>
+
+    <Eq (Success (Decimal 101 2)) <Json-Parse '1.01'>>
+    <Eq (Success (Decimal '-' 1004 2)) <Json-Parse '-10.040'>>
+
+    <Eq (Success (Decimal 101 5)) <Json-Parse '1.01e-3'>>
+    <Eq (Success (Decimal '-' 1004 5)) <Json-Parse '-10.040e-3'>>
+    <Eq (Success (Decimal 1010 0)) <Json-Parse '1.01e+3'>>
+    <Eq (Success (Decimal '-' 10040 0)) <Json-Parse '-10.040e+3'>>
+
+    <Eq (Success (Decimal 0 0)) <Json-Parse '0'>>
+    <Eq (Success (Decimal 0 0)) <Json-Parse '-0'>>
+    <Eq (Success (Decimal 0 0)) <Json-Parse '0.0'>>
+    <Eq (Success (Decimal 5 1)) <Json-Parse '0.5'>>
+    <Eq (Success (Decimal '-' 5 1)) <Json-Parse '-0.5'>>
+    <Eq (Success (Decimal 1 3)) <Json-Parse '0.001'>>
+    <Eq (Success (Decimal 0 0)) <Json-Parse '0e5'>>
+    <Eq (Success (Decimal 0 0)) <Json-Parse '-0e-5'>>
+    <Eq (Success (Decimal 0 0)) <Json-Parse '0e1000000'>>
+
+    <Eq (Success (Decimal 100000 0)) <Json-Parse '1E5'>>
+    <Eq (Success (Decimal 100000 0)) <Json-Parse '1E+5'>>
+    <Eq (Success (Decimal 1 5)) <Json-Parse '1E-5'>>
+
+    <Eq (Success (Decimal 100000 0)) <Json-Parse '1e05'>>
+    <Eq (Success (Decimal 1 0)) <Json-Parse '1e0'>>
+    <Eq (Success (Decimal 1 0)) <Json-Parse '1e-0'>>
+
+    <Eq (Success (Decimal 1 0)) <Json-Parse '1.0'>>
+    <Eq (Success (Decimal 10 0)) <Json-Parse '10.00'>>
+    <Eq (Success (Decimal 1 0)) <Json-Parse '10e-1'>>
+    <Eq (Success (Decimal 10 0)) <Json-Parse '100e-1'>>
+    <Eq (Success (Decimal 986 1)) <Json-Parse '98.60'>>
+    <Eq (Success (Decimal 986 1)) <Json-Parse '9.86e1'>>
+
+    <Eq (Success (Decimal 5 2392820605 209254667 718683306 3318525184 3642144092 3087058919 2186998801 1350765641 3535964659 3173539363 3257179932 994905009 3096872027 2613903864 4089377481 277556446 291618810 1501364135 3284312674 1585981550 1465093847 2318115855 3913023488 0 0 0 0 0 0 0 0 0 0)) <Json-Parse '9.99e308'>>
+    <Eq (Success (Decimal 123 10000000)) <Json-Parse '123e-10000000'>>
+    <Eq (Fails 1 1 'Number is too large') <Json-Parse '1e309'>>
+    <Eq (Fails 1 1 'Number is too large') <Json-Parse '-1e309'>>
+    <Eq (Fails 1 1 'Number is too large') <Json-Parse '0.1e310'>>
+    <Eq (Fails 1 1 'Number is too large') <Json-Parse '1e1000'>>
+
+    <Eq (Success (Decimal 4294967295 0)) <Json-Parse '4294967295'>>
+    <Eq (Success (Decimal 1 0 0)) <Json-Parse '4294967296'>>
+
+    <Eq (Success (Decimal 12 0)) <Json-Parse ' \n 12 \t'>>
+
+    <Eq (Fails 1 2 'Expected a digit') <Json-Parse '-'>>
+    <Eq (Fails 1 2 'Expected a digit') <Json-Parse '-a'>>
+    <Eq (Fails 1 2 'Expected a digit') <Json-Parse '--1'>>
+    <Eq (Fails 2 4 'Expected a digit') <Json-Parse '\n  -'>>
+    <Eq (Fails 1 1 'Expected a value') <Json-Parse '+1'>>
+    <Eq (Fails 1 1 'Expected a value') <Json-Parse '.5'>>
+
+    <Eq (Fails 1 2 'Expected end of input after the root value') <Json-Parse '01'>>
+    <Eq (Fails 1 2 'Expected end of input after the root value') <Json-Parse '00'>>
+    <Eq (Fails 1 3 'Expected end of input after the root value') <Json-Parse '-01'>>
+    <Eq (Fails 1 2 'Expected end of input after the root value') <Json-Parse '1-'>>
+
+    <Eq (Fails 1 2 'Expected end of input after the root value') <Json-Parse '1.'>>
+    <Eq (Fails 1 2 'Expected end of input after the root value') <Json-Parse '1.a'>>
+    <Eq (Fails 1 2 'Expected end of input after the root value') <Json-Parse '1.e5'>>
+    <Eq (Fails 1 2 'Expected end of input after the root value') <Json-Parse '1..2'>>
+
+    <Eq (Fails 1 2 'Expected end of input after the root value') <Json-Parse '1e'>>
+    <Eq (Fails 1 2 'Expected end of input after the root value') <Json-Parse '1ea'>>
+    <Eq (Fails 1 4 'Expected a digit') <Json-Parse '1e+'>>
+    <Eq (Fails 1 4 'Expected a digit') <Json-Parse '1e-'>>
+    <Eq (Fails 1 4 'Expected end of input after the root value') <Json-Parse '1e5.0'>>
+    <Eq (Fails 1 4 'Expected end of input after the root value') <Json-Parse '1e5x'>>
+}
+
+
+Eq {
+  (e.Eq) e.Eq = /* pass */;
+}

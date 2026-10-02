@@ -10,10 +10,18 @@ t.Value ::=
 t.Object ::= (Object (t.String t.Value)*)
 t.Array ::= (Array t.Value*)
 t.String ::= (String s.CHAR*)
-t.Number ::= (Number (e.Integer) (e.Fraction?) (e.Exponent?))
-e.Integer ::= '-'? s.NUMBER
-e.Fraction ::= '-'? s.NUMBER
-e.Exponent ::= '-'? s.NUMBER
+
+t.Number ::= (Decimal e.Coefficient s.Scale)
+e.Coefficient ::= '-'? s.NUMBER+
+s.Scale ::= s.NUMBER
+  Value = Coefficient / 10^Scale
+
+  Values are normalized:
+  - Integer values have a 0 exponent. E.g. 10, 1e1, 10.0 and 0.1e2 all become (Decimal 10 0).
+  - Non-integer values have a negative exponent and the coefficient doesn't end in 0. E.g. 98.6, 98.60 and 9.86e1 all become (Decimal 986 1).
+  - Zero values - e.g. 0, -0, 0.0, 0e5 - all become (Decimal 0 (0)).
+
+  Rejects values of 1e309 or more. Small numbers stay: 123e-10000000 becomes (Decimal 123 10000000).
 
 s.Line ::= s.NUMBER
 s.Col ::= s.NUMBER
@@ -38,13 +46,9 @@ $ENTRY Json-Stringify {
 
   (String e.String) = '"' <Escape e.String> '"';
 
-  (Number (e.Integer) (/* empty */) (/* empty */)) = <Symb e.Integer>;
+  (Decimal e.Coefficient 0) = <Symb e.Coefficient>;
 
-  (Number (e.Integer) (/* empty */) (e.Exponent )) = <Symb e.Integer> 'e' <Symb e.Exponent>;
-
-  (Number (e.Integer) (e.Fraction ) (/* empty */)) = <Symb e.Integer> '.' <Symb e.Fraction>;
-
-  (Number (e.Integer) (e.Fraction ) (e.Exponent )) = <Symb e.Integer> '.' <Symb e.Fraction> 'e' <Symb e.Exponent>;
+  (Decimal e.Coefficient s.Scale) = <Symb e.Coefficient> 'e-' <Symb s.Scale>;
 
   (Object e.Members) = '{' <MapJoin Json-Stringify ',' e.Members> '}';
 
@@ -316,7 +320,7 @@ Parse-Number-SwFraction {
 
 Parse-Number-SwExponent {
   Success s.Line s.Col (e.Stack (e.Integer) (e.Fraction) (e.Exponent)) e.Content
-    = Success s.Line s.Col (e.Stack (Number (<Numb e.Integer>) <NumbOptional e.Fraction> <NumbOptional e.Exponent>)) e.Content;
+    = Success s.Line s.Col (e.Stack <NumberToDecimal e.Integer (e.Fraction) (e.Exponent)>) e.Content;
 
   Fails e.Error = Fails e.Error;
 }
@@ -343,13 +347,13 @@ Parse-Fraction {
 
 Parse-Exponent {
   s.Line s.Col (e.Stack) s.E '+' e.Content, <Upper s.E> : 'E'
-    = <Parse-Digits s.Line <Inc s.Col> (e.Stack ('+')) e.Content>;
+    = <Parse-Digits s.Line <Add s.Col 2> (e.Stack ('+')) e.Content>;
 
   s.Line s.Col (e.Stack) s.E '-' e.Content, <Upper s.E> : 'E'
-    = <Parse-Digits s.Line <Inc s.Col> (e.Stack ('-')) e.Content>;
+    = <Parse-Digits s.Line <Add s.Col 2> (e.Stack ('-')) e.Content>;
 
   s.Line s.Col (e.Stack) s.E s.Char e.Content, <Upper s.E> : 'E', <Type s.Char> : 'D' e.1
-    = <Parse-Digits s.Line s.Col (e.Stack (/* empty */)) s.Char e.Content>;
+    = <Parse-Digits s.Line <Inc s.Col> (e.Stack (/* empty */)) s.Char e.Content>;
 
   s.Line s.Col (e.Stack) e.Content = Success s.Line s.Col (e.Stack (/* empty */)) e.Content;
 }
@@ -451,7 +455,34 @@ Escape {
 }
 
 
-NumbOptional {
-  /* empty */ = (/* empty */);
-  e.Numb = (<Numb e.Numb>);
+NumberToDecimal {
+  e.Integer (e.Fraction) (e.Exponent)
+    =
+      <NumberToDecimal-ToDecimal
+        <NumberToDecimal-NormalizeScale
+          <NumberToDecimal-ToCoefficientAndScale e.Integer (<Lenw e.Fraction>) (e.Exponent)>
+        >
+      >;
+}
+
+
+NumberToDecimal-ToCoefficientAndScale {
+  e.Integer (s.FractionScale e.Fraction) (e.Exponent)
+    = e.Integer e.Fraction (<Add <Mul ('-' 1) <Numb e.Exponent>> s.FractionScale>);
+}
+
+
+NumberToDecimal-NormalizeScale {
+  e.Coefficient (0) = e.Coefficient 0;
+
+  e.Coefficient ('-' s.Scale) = <NumberToDecimal-NormalizeScale e.Coefficient '0' ('-' <Sub s.Scale 1>)>;
+
+  e.Coefficient '0' (s.Scale) = <NumberToDecimal-NormalizeScale e.Coefficient (<Sub s.Scale 1>)>;
+
+  e.Coefficient (s.Scale) = e.Coefficient s.Scale;
+}
+
+
+NumberToDecimal-ToDecimal {
+  e.Coefficient s.Scale = (Decimal <Numb e.Coefficient> s.Scale);
 }
