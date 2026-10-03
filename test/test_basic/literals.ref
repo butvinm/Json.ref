@@ -16,7 +16,7 @@ $ENTRY Go {
 
     <Eq (Success True) <Json-Parse ' \t\r\n true \t\r\n '>>
 
-    <Eq (Success (Decimal 1 0)) <Json-Parse '1'>>
+    <Eq (Success (Decimal 1 (0))) <Json-Parse '1'>>
 
     <Eq (Fails 1 1 'Expected a value') <Json-Parse /* empty */>>
     <Eq (Fails 1 1 'Expected a value') <Json-Parse 'True'>>
