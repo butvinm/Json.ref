@@ -41,7 +41,7 @@ $ENTRY Json-Stringify {
 
   (String e.String) = '"' <Escape e.String> '"';
 
-  (Decimal e.Decimal) = '';
+  (Decimal e.Decimal) = <DecimalToScientific (Decimal e.Decimal)>;
 
   (Object e.Members) = '{' <MapJoin Json-Stringify ',' e.Members> '}';
 
@@ -455,6 +455,67 @@ NumberToDecimal {
 
 NumberToDecimal-Aux {
   '-' e.Integer (s.FractionScale e.Fraction) (e.Exponent) = (Decimal '-' <Numb e.Integer e.Fraction> (<Sub (<Numb e.Exponent>) s.FractionScale>));
-  
+
   e.Integer (s.FractionScale e.Fraction) (e.Exponent) = (Decimal <Numb e.Integer e.Fraction> (<Sub (<Numb e.Exponent>) s.FractionScale>));
+}
+
+
+DecimalToScientific {
+  (Decimal '-' e.Coefficient t.Exponent) = '-' <DecimalToScientific (Decimal e.Coefficient t.Exponent)>;
+
+  (Decimal e.Coefficient (0)) = <Symb e.Coefficient>;
+
+  (Decimal e.Coefficient t.Exponent)
+    , <Lenw <Symb e.Coefficient>> : s.Count e.Digits
+    , <Add t.Exponent s.Count> : e.Point
+    = <DecimalToScientific-Sw t.Exponent (e.Point) e.Digits>;
+}
+
+
+DecimalToScientific-Sw {
+  t.Exponent t.Point e.Digits
+    , <Compare t.Exponent 0> : '-'
+    , <Compare t.Point '-' 6> : '+'
+    = <DecimalToScientific-InsertPoint t.Point e.Digits>;
+
+  t.Exponent t.Point s.D e.Digits
+    = s.D <DecimalToScientific-Fraction e.Digits> <DecimalToScientific-Exponent <Sub t.Point 1>>;
+}
+
+
+DecimalToScientific-InsertPoint {
+  (e.Point) e.Digits
+    , <Compare (e.Point) 0> : '+'
+    = <DecimalToScientific-InsertPointAt e.Point e.Digits>;
+
+  (e.Point) e.Digits
+    = '0.' <DecimalToScientific-InsertZeros <Sub 0 e.Point>> e.Digits;
+}
+
+
+DecimalToScientific-InsertPointAt {
+  0 e.Digits = '.' e.Digits;
+
+  s.N s.D e.Digits = s.D <DecimalToScientific-InsertPointAt <Sub s.N 1> e.Digits>;
+}
+
+
+DecimalToScientific-InsertZeros {
+  0 = /* empty */;
+
+  s.N = '0' <DecimalToScientific-InsertZeros <Sub s.N 1>>;
+}
+
+
+DecimalToScientific-Exponent {
+  '-' e.Exponent = 'E-' <Symb e.Exponent>;
+
+  e.Exponent = 'E+' <Symb e.Exponent>;
+}
+
+
+DecimalToScientific-Fraction {
+  /* empty */ = /* empty */;
+
+  e.Digits = '.' e.Digits;
 }
