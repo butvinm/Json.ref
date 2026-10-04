@@ -293,7 +293,8 @@ Parse-Escaped {
 
 
 Parse-Number {
-  s.Line s.Col t.Stack e.Content = <Parse-Number-SwInteger <Parse-Integer s.Line s.Col t.Stack e.Content>>;
+  s.Line s.Col (e.Stack) e.Content
+    = <Parse-Number-SwInteger <Parse-Integer s.Line s.Col (e.Stack s.Line s.Col) e.Content>>;
 }
 
 
@@ -312,10 +313,24 @@ Parse-Number-SwFraction {
 
 
 Parse-Number-SwExponent {
-  Success s.Line s.Col (e.Stack (e.Integer) (e.Fraction) (e.Exponent)) e.Content
-    = Success s.Line s.Col (e.Stack <NumberToDecimal e.Integer (e.Fraction) (e.Exponent)>) e.Content;
+  Success s.Line s.Col (e.Stack s.BLine s.BCol (e.Integer) (e.Fraction) (e.Exponent)) e.Content
+    =
+      <Parse-Number-SwNumberToDecimal
+        <NumberToDecimal e.Integer (e.Fraction) (e.Exponent)>
+        (s.BLine s.BCol)
+        (s.Line s.Col (e.Stack) e.Content)
+      >;
 
   Fails e.Error = Fails e.Error;
+}
+
+
+Parse-Number-SwNumberToDecimal {
+  Success t.Decimal (s.BLine s.BCol) (s.Line s.Col (e.Stack) e.Content)
+    = Success s.Line s.Col (e.Stack t.Decimal) e.Content;
+
+  Fails e.Error (s.BLine s.BCol) (s.Line s.Col (e.Stack) e.Content)
+    = Fails s.BLine s.BCol e.Error;
 }
 
 
@@ -448,15 +463,89 @@ Escape {
 }
 
 
-NumberToDecimal {
-  e.Integer (e.Fraction) (e.Exponent) = <NumberToDecimal-Aux e.Integer (<Lenw e.Fraction>) (e.Exponent)>;
+NormalizeNumber {
+  '-' e.Number = '-' <NormalizeNumber e.Number>;
+
+  0 = 0;
+
+  0 e.Number = <NormalizeNumber e.Number>;
+
+  e.Number = e.Number;
 }
 
 
-NumberToDecimal-Aux {
-  '-' e.Integer (s.FractionScale e.Fraction) (e.Exponent) = (Decimal '-' <Numb e.Integer e.Fraction> (<Sub (<Numb e.Exponent>) s.FractionScale>));
+NumberToDecimal {
+  '-' e.Integer t.Fraction t.Exponent
+    =
+      <NumberToDecimal-Sw
+        ('-')
+          <NumberToDecimal-SwValidateLen <NumberToDecimal-ValidateLen <NumberToDecimal-Prepare e.Integer t.Fraction t.Exponent>>>
+      >;
 
-  e.Integer (s.FractionScale e.Fraction) (e.Exponent) = (Decimal <Numb e.Integer e.Fraction> (<Sub (<Numb e.Exponent>) s.FractionScale>));
+  e.Integer t.Fraction t.Exponent
+    =
+      <NumberToDecimal-Sw
+        (/* empty */)
+          <NumberToDecimal-SwValidateLen <NumberToDecimal-ValidateLen <NumberToDecimal-Prepare e.Integer t.Fraction t.Exponent>>>
+      >;
+}
+
+
+NumberToDecimal-Sw {
+  (e.Sign) Success e.Coefficient t.Exponent = Success (Decimal e.Sign e.Coefficient t.Exponent);
+
+  (e.Sign) Fails e.Error = Fails e.Error;
+}
+
+
+NumberToDecimal-Prepare {
+  e.Integer (e.Fraction) t.Exponent
+    , <Lenw e.Fraction> : s.FractionScale e.0
+    = <NumberToDecimal-StripLeadingZeros e.Integer e.Fraction> t.Exponent s.FractionScale;
+}
+
+
+NumberToDecimal-StripLeadingZeros {
+  '0' e.Digits = <NumberToDecimal-StripLeadingZeros e.Digits>;
+
+  e.Digits = e.Digits;
+}
+
+
+NumberToDecimal-ValidateLen {
+  e.Coefficient (e.Exponent) s.FractionScale
+    , <Lenw e.Coefficient> : s.CoefficientLen e.0
+    , <Compare s.CoefficientLen 4300> : '+'
+    = Fails 'Number has more than 4300 significant digits';
+
+  e.Coefficient (e.Exponent) s.FractionScale
+    , <Lenw e.Exponent> : s.ExponentLen e.1
+    , <Compare s.ExponentLen 20> : '+'
+    = Fails 'Number exponent is out of range: the exponent of its last digit must be between -4294967295 and 4294967295';
+
+  e.Coefficient (e.Exponent) s.FractionScale
+    = Success <Numb e.Coefficient> (<NormalizeNumber <Sub (<Numb e.Exponent>) s.FractionScale>>);
+}
+
+
+NumberToDecimal-SwValidateLen {
+  Success e.Coefficient t.Exponent = <NumberToDecimal-ValidateNumb e.Coefficient t.Exponent>;
+
+  Fails e.Error = Fails e.Error;
+}
+
+
+NumberToDecimal-ValidateNumb {
+  e.Coefficient t.Exponent
+    , <Compare t.Exponent 4294967295> : '+'
+    = Fails 'Number exponent is out of range: the exponent of its last digit must be between -4294967295 and 4294967295';
+
+  e.Coefficient t.Exponent
+    , <Compare t.Exponent '-' 4294967295> : '-'
+    = Fails 'Number exponent is out of range: the exponent of its last digit must be between -4294967295 and 4294967295';
+
+  e.Coefficient t.Exponent
+    = Success e.Coefficient t.Exponent;
 }
 
 
@@ -466,8 +555,8 @@ DecimalToScientific {
   (Decimal e.Coefficient (0)) = <Symb e.Coefficient>;
 
   (Decimal e.Coefficient t.Exponent)
-    , <Lenw <Symb e.Coefficient>> : s.Count e.Digits
-    , <Add t.Exponent s.Count> : e.Point
+    , <Lenw <Symb e.Coefficient>> : s.Len e.Digits
+    , <Add t.Exponent s.Len> : e.Point
     = <DecimalToScientific-Sw t.Exponent (e.Point) e.Digits>;
 }
 

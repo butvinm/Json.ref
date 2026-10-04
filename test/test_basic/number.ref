@@ -3,7 +3,8 @@ $EXTERN Json-Parse;
 
 
 $ENTRY Go {
-  = <Eq (Success (Decimal 1 (0))) <Json-Parse '1'>>
+  =
+    <Eq (Success (Decimal 1 (0))) <Json-Parse '1'>>
     <Eq (Success (Decimal '-' 10 (0))) <Json-Parse '-10'>>
     <Eq (Success (Decimal 232830643 2808348672 (0))) <Json-Parse '1000000000000000000'>>
 
@@ -54,9 +55,23 @@ $ENTRY Go {
     <Eq (Success (Decimal 123 ('-' 10000000))) <Json-Parse '123e-10000000'>>
 
     <Eq (Success (Decimal 1 (4294967295))) <Json-Parse '1e4294967295'>>
-    <Eq (Success (Decimal 1 (1 0))) <Json-Parse '1e4294967296'>>
-    <Eq (Success (Decimal 1 ('-' 1 0))) <Json-Parse '1e-4294967296'>>
-    <Eq (Success (Decimal 15 ('-' 1 0))) <Json-Parse '1.5e-4294967295'>>
+    <Eq (Success (Decimal 1 ('-' 4294967295))) <Json-Parse '1e-4294967295'>>
+    <Eq (Success (Decimal 15 ('-' 4294967295))) <Json-Parse '1.5e-4294967294'>>
+    <Eq (Success (Decimal 1 (4294967295))) <Json-Parse '0.1e4294967296'>>
+    <Eq (Fails 1 1 <ExponentError>) <Json-Parse '1e4294967296'>>
+    <Eq (Fails 1 1 <ExponentError>) <Json-Parse '1e-4294967296'>>
+    <Eq (Fails 1 1 <ExponentError>) <Json-Parse '1.5e-4294967295'>>
+    <Eq (Fails 1 1 <ExponentError>) <Json-Parse '1e99999999999'>>
+
+    <Eq (Success (Decimal <Numb '1' <Zeros 4299>> (0))) <Json-Parse '1' <Zeros 4299>>>
+    <Eq (Success (Decimal '-' <Numb '1' <Zeros 4299>> (0))) <Json-Parse '-1' <Zeros 4299>>>
+    <Eq (Success (Decimal <Numb '1' <Zeros 4299>> ('-' 4299))) <Json-Parse '1.' <Zeros 4299>>>
+    <Eq (Success (Decimal 1 ('-' 4300))) <Json-Parse '0.' <Zeros 4299> '1'>>
+    <Eq (Success (Decimal 0 ('-' 5000))) <Json-Parse '0.' <Zeros 5000>>>
+    <Eq (Fails 1 1 <DigitsError>) <Json-Parse '1' <Zeros 4300>>>
+    <Eq (Fails 1 1 <DigitsError>) <Json-Parse '-1' <Zeros 4300>>>
+    <Eq (Fails 1 1 <DigitsError>) <Json-Parse '1.' <Zeros 4300>>>
+    <Eq (Fails 1 1 <DigitsError>) <Json-Parse '1' <Zeros 4299> '.5'>>
 
     <Eq (Success (Decimal 4294967295 (0))) <Json-Parse '4294967295'>>
     <Eq (Success (Decimal 1 0 (0))) <Json-Parse '4294967296'>>
@@ -91,4 +106,21 @@ $ENTRY Go {
 
 Eq {
   (e.Eq) e.Eq = /* pass */;
+}
+
+
+DigitsError {
+  = 'Number has more than 4300 significant digits';
+}
+
+
+ExponentError {
+  = 'Number exponent is out of range: the exponent of its last digit must be between -4294967295 and 4294967295';
+}
+
+
+Zeros {
+  0 = /* empty */;
+
+  s.Count = '0' <Zeros <Sub s.Count 1>>;
 }
