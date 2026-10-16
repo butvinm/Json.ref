@@ -3,7 +3,7 @@
 # Checks that a file means the same to Python before and after a round trip through Json-Parse and Json-Stringify:
 #   json.load(file) == json.load(stringify(parse(file)))
 # Inputs are the y_ files of ../test_parsing/in, the ones every parser must accept.
-# The round trip is done by ./run, which prints the parsed file stringified back.
+# run.sh performs the full compatibility check for each file.
 
 test_dir=$(dirname "$0")
 test_dir=${test_dir#./}
@@ -11,12 +11,9 @@ test_dir=${test_dir#./}
 suites_dir=$(cd "$test_dir/.." && pwd)
 suites_dir=${suites_dir#"$PWD"/}
 inputs_dir="$suites_dir/test_parsing/in"
-runner="$test_dir/run"
+runner="$test_dir/run.sh"
 python=${PYTHON:-python3}
 width=80
-
-memory_limit_mb=${MEMORY_LIMIT_MB:-256}
-time_limit_s=${TIME_LIMIT_S:-10}
 
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -55,13 +52,6 @@ report() {
     echo "$1 $3$2$reset$(repeat ' ' "$pad")$percent"
 }
 
-# -l and -e are options of the Refal-05 runtime: memory limit in megabytes and a short crash dump.
-# perl is used for the time limit because stock macOS has no timeout command.
-run_round_trip() {
-    perl -e 'alarm shift; exec @ARGV' "$time_limit_s" \
-        "$runner" "-l$memory_limit_mb" -e "$1"
-}
-
 if ! command -v "$python" > /dev/null; then
     echo "$python not found, set PYTHON to the interpreter to compare with"
     exit 1
@@ -89,37 +79,7 @@ index=0
 for input_file in "${inputs[@]}"; do
     index=$(( index + 1 ))
     filename=$(basename "$input_file" .json)
-    actual_file="$out_dir/$filename.json"
-
-    run_round_trip "$input_file" > "$actual_file" 2> "$tmp_dir/$filename.stderr"
-    exit_code=$?
-
-    case $exit_code in
-        0) result=accepted ;;
-        2) result=rejected ;;
-        142) result="timed out after ${time_limit_s}s" ;;
-        202) result="ran out of memory (limit ${memory_limit_mb} MB)" ;;
-        *) result="crashed with exit code $exit_code" ;;
-    esac
-
-    if [[ $result == rejected ]]; then
-        failed+=("$input_file")
-        failed_messages+=("rejected by Json-Parse")
-        echo "$actual_file: $(cat "$actual_file")" > "$tmp_dir/$filename.details"
-        report "$input_file" FAILED "$red"
-        continue
-    elif [[ $result != accepted ]]; then
-        errors+=("$input_file")
-        error_messages+=("$result")
-        {
-            echo "$actual_file: incomplete, the runner $result"
-            grep -v '^[[:space:]]*$' "$tmp_dir/$filename.stderr" | head -n 6 | cut -c "1-$width"
-        } > "$tmp_dir/$filename.details"
-        report "$input_file" ERROR "$red"
-        continue
-    fi
-
-    "$python" "$test_dir/compare.py" "$input_file" "$actual_file" > "$tmp_dir/$filename.details" 2>&1
+    "$runner" "$input_file" > "$tmp_dir/$filename.details" 2>&1
     exit_code=$?
 
     case $exit_code in
@@ -129,22 +89,12 @@ for input_file in "${inputs[@]}"; do
             ;;
         1)
             failed+=("$input_file")
-            failed_messages+=("round-tripped value differs")
+            failed_messages+=("$(head -n 1 "$tmp_dir/$filename.details")")
             report "$input_file" FAILED "$red"
-            ;;
-        2)
-            failed+=("$input_file")
-            failed_messages+=("$python can't load the round-tripped file")
-            report "$input_file" FAILED "$red"
-            ;;
-        3)
-            errors+=("$input_file")
-            error_messages+=("$python can't load the original file")
-            report "$input_file" ERROR "$red"
             ;;
         *)
             errors+=("$input_file")
-            error_messages+=("compare.py exited with code $exit_code")
+            error_messages+=("$(head -n 1 "$tmp_dir/$filename.details")")
             report "$input_file" ERROR "$red"
             ;;
     esac
@@ -156,7 +106,6 @@ if [[ ${#failed[@]} -gt 0 ]]; then
     for i in "${!failed[@]}"; do
         filename=$(basename "${failed[$i]}" .json)
         bar _ "${failed[$i]}" "$red$bold"
-        echo "${failed_messages[$i]}"
         [[ -s "$tmp_dir/$filename.details" ]] && cat "$tmp_dir/$filename.details"
         echo
     done
@@ -167,7 +116,6 @@ if [[ ${#errors[@]} -gt 0 ]]; then
     for i in "${!errors[@]}"; do
         filename=$(basename "${errors[$i]}" .json)
         bar _ "${errors[$i]}" "$red$bold"
-        echo "${error_messages[$i]}"
         [[ -s "$tmp_dir/$filename.details" ]] && cat "$tmp_dir/$filename.details"
         echo
     done

@@ -1,6 +1,6 @@
 """
 Compare two JSON files as Python values and exit with 0 if they are equal.
-test.sh runs this for each input file and its copy that went through Json-Parse and Json-Stringify.
+run.sh runs this for an input file and its copy that went through Json-Parse and Json-Stringify.
 
 Exit codes: 1 - the values differ, 2 - Python can't load the round-tripped file, 3 - Python can't load the original file.
 """

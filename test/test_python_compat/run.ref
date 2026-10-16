@@ -1,6 +1,6 @@
 /**
 Parse the given JSON file and print it stringified back, or print the parse error.
-test.sh runs this for each y_ file from ../test_parsing/in and gives the output to compare.py.
+run.sh runs this for one file and gives the output to compare.py.
 */
 
 
