@@ -1,0 +1,102 @@
+/**
+Results of Json-Parse for strings: plain characters, escape sequences and malformed strings.
+Eq takes the expected result in brackets and the actual one after them, the first mismatch crashes the program.
+test.sh runs every .ref file of this directory as a separate program and reports the crashed ones.
+*/
+
+
+*$FROM Json
+$EXTERN Json-Parse;
+
+
+$ENTRY Go {
+  = <Eq (Success (String )) <Json-Parse '""'>>
+    <Eq (Success (String 'abc')) <Json-Parse '"abc"'>>
+    <Eq (Success (String ' a  b ')) <Json-Parse '" a  b "'>>
+    <Eq (Success (String 'true')) <Json-Parse '"true"'>>
+    <Eq (Success (String '123')) <Json-Parse '"123"'>>
+    <Eq (Success (String '[]{}:,')) <Json-Parse '"[]{}:,"'>>
+    <Eq (Success (String '\x7F')) <Json-Parse '"\x7F"'>>
+    <Eq (Success (String '\xC3\xA9')) <Json-Parse '"\xC3\xA9"'>>
+
+    <Eq (Success (String 'a')) <Json-Parse ' \t\r\n "a" \t\r\n '>>
+
+    <Eq (Success (String '"' )) <Json-Parse '"\\""'>>
+    <Eq (Success (String '\\' )) <Json-Parse '"\\\\"'>>
+    <Eq (Success (String '/'  )) <Json-Parse '"\\/"'>>
+    <Eq (Success (String '\x08')) <Json-Parse '"\\b"'>>
+    <Eq (Success (String '\x0C')) <Json-Parse '"\\f"'>>
+    <Eq (Success (String '\n' )) <Json-Parse '"\\n"'>>
+    <Eq (Success (String '\r' )) <Json-Parse '"\\r"'>>
+    <Eq (Success (String '\t' )) <Json-Parse '"\\t"'>>
+    <Eq (Success (String 'a"b\\c/d\x08e\x0Cf\ng\rh\ti')) <Json-Parse '"a\\"b\\\\c/d\\be\\ff\\ng\\rh\\ti"'>>
+    <Eq (Success (String '\\n')) <Json-Parse '"\\\\n"'>>
+
+    <Eq (Success (String 'A')) <Json-Parse '"\\u0041"'>>
+    <Eq (Success (String 'JJ')) <Json-Parse '"\\u004a\\u004A"'>>
+    <Eq (Success (String 'a b')) <Json-Parse '"a\\u0020b"'>>
+    <Eq (Success (String '"')) <Json-Parse '"\\u0022"'>>
+    <Eq (Success (String <Chr 0>)) <Json-Parse '"\\u0000"'>>
+    <Eq (Success (String '\x7F')) <Json-Parse '"\\u007F"'>>
+
+    <Eq (Success (String '\xC2\x80')) <Json-Parse '"\\u0080"'>>
+    <Eq (Success (String '\xC3\xA9')) <Json-Parse '"\\u00e9"'>>
+    <Eq (Success (String '\xC3\xA9')) <Json-Parse '"\\u00E9"'>>
+    <Eq (Success (String '\xD0\x96')) <Json-Parse '"\\u0416"'>>
+    <Eq (Success (String '\xDF\xBF')) <Json-Parse '"\\u07FF"'>>
+    <Eq (Success (String '\xE0\xA0\x80')) <Json-Parse '"\\u0800"'>>
+    <Eq (Success (String '\xE2\x82\xAC')) <Json-Parse '"\\u20AC"'>>
+    <Eq (Success (String '\xED\x9F\xBF')) <Json-Parse '"\\uD7FF"'>>
+    <Eq (Success (String '\xEE\x80\x80')) <Json-Parse '"\\uE000"'>>
+    <Eq (Success (String '\xEF\xBF\xBF')) <Json-Parse '"\\uFFFF"'>>
+    <Eq (Success (String 'a\xC3\xA9b\xE2\x82\xAC')) <Json-Parse '"a\\u00e9b\\u20ac"'>>
+    <Eq (Success (String '\xC3\xA9\xC3\xA9')) <Json-Parse '"\\u00e9\xC3\xA9"'>>
+
+    <Eq (Success (String '\xF0\x90\x80\x80')) <Json-Parse '"\\uD800\\uDC00"'>>
+    <Eq (Success (String '\xF0\x9F\x98\x80')) <Json-Parse '"\\uD83D\\uDE00"'>>
+    <Eq (Success (String '\xF0\x9F\x98\x80')) <Json-Parse '"\\ud83d\\ude00"'>>
+    <Eq (Success (String '\xF4\x8F\xBF\xBF')) <Json-Parse '"\\uDBFF\\uDFFF"'>>
+    <Eq (Success (String 'a\xF0\x9F\x98\x80b\xF0\x9F\x98\x80')) <Json-Parse '"a\\uD83D\\uDE00b\\uD83D\\uDE00"'>>
+
+    <Eq (Fails 1 1 'Expected a value') <Json-Parse '\'a\''>>
+    <Eq (Fails 1 1 'Expected a value') <Json-Parse 'abc"'>>
+
+    <Eq (Fails 1 2 'Unexpected end of input in a string') <Json-Parse '"'>>
+    <Eq (Fails 1 5 'Unexpected end of input in a string') <Json-Parse '"abc'>>
+    <Eq (Fails 2 6 'Unexpected end of input in a string') <Json-Parse '\n  "ab'>>
+
+    <Eq (Fails 1 3 'Character is outside the permitted range U+0020-U+10FFFF') <Json-Parse '"a\nb"'>>
+    <Eq (Fails 1 2 'Character is outside the permitted range U+0020-U+10FFFF') <Json-Parse '"\t"'>>
+    <Eq (Fails 1 2 'Character is outside the permitted range U+0020-U+10FFFF') <Json-Parse '"\x1F"'>>
+
+    <Eq (Fails 1 2 'Unexpected end of input after \\') <Json-Parse '"\\'>>
+    <Eq (Fails 1 3 'Unsupported escape character') <Json-Parse '"a\\x"'>>
+    <Eq (Fails 1 2 'Unsupported escape character') <Json-Parse '"\\a"'>>
+    <Eq (Fails 1 2 'Unsupported escape character') <Json-Parse '"\\U0041"'>>
+
+    <Eq (Fails 1 2 'Expected 4 hex digits after \'\\u\'') <Json-Parse '"\\u"'>>
+    <Eq (Fails 1 2 'Expected 4 hex digits after \'\\u\'') <Json-Parse '"\\u12"'>>
+    <Eq (Fails 1 2 'Expected 4 hex digits after \'\\u\'') <Json-Parse '"\\u12G4"'>>
+    <Eq (Fails 1 3 'Expected 4 hex digits after \'\\u\'') <Json-Parse '"a\\u004"'>>
+
+    <Eq (Fails 1 2 'Unmatched UTF-16 surrogate pair') <Json-Parse '"\\uD800"'>>
+    <Eq (Fails 1 2 'Unmatched UTF-16 surrogate pair') <Json-Parse '"\\uDBFF"'>>
+    <Eq (Fails 1 2 'Unmatched UTF-16 surrogate pair') <Json-Parse '"\\uDC00"'>>
+    <Eq (Fails 1 2 'Unmatched UTF-16 surrogate pair') <Json-Parse '"\\uDFFF"'>>
+    <Eq (Fails 1 3 'Unmatched UTF-16 surrogate pair') <Json-Parse '"a\\uD83Db"'>>
+    <Eq (Fails 1 2 'Unmatched UTF-16 surrogate pair') <Json-Parse '"\\uD83D\\u0041"'>>
+    <Eq (Fails 1 2 'Unmatched UTF-16 surrogate pair') <Json-Parse '"\\uD83D\\uD83D"'>>
+    <Eq (Fails 1 2 'Unmatched UTF-16 surrogate pair') <Json-Parse '"\\uD83D\\u12"'>>
+    <Eq (Fails 1 2 'Unmatched UTF-16 surrogate pair') <Json-Parse '"\\uDE00\\uD83D"'>>
+
+    <Eq (Fails 1 4 'Expected end of input after the root value') <Json-Parse '"a""b"'>>
+    <Eq (Fails 1 6 'Expected end of input after the root value') <Json-Parse '"\\n" x'>>
+    <Eq (Fails 1 10 'Expected end of input after the root value') <Json-Parse '"\\u0041" x'>>
+    <Eq (Fails 1 10 'Expected end of input after the root value') <Json-Parse '"\\u20AC" x'>>
+    <Eq (Fails 1 16 'Expected end of input after the root value') <Json-Parse '"\\uD83D\\uDE00" x'>>;
+}
+
+
+Eq {
+  (e.Eq) e.Eq = /* pass */;
+}
