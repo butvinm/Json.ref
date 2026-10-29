@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Runs the parser against the JSONTestSuite parsing tests from ./in.
+# Runs the parser against the JSONTestSuite parsing tests from ../fixtures/JSONTestSuite/parsing.
 # The expected result is defined by the file name prefix:
 #   y_ - must be accepted, n_ - must be rejected, i_ - either is fine, but it must not crash.
 
@@ -8,11 +8,13 @@ test_dir=$(dirname "$0")
 test_dir=${test_dir#./}
 source "$test_dir/../lib.sh"
 
+inputs_dir="$test_dir/../fixtures/JSONTestSuite/parsing"
+
 shopt -s nullglob
-inputs=("$test_dir"/in/*.json)
+inputs=("$inputs_dir"/*.json)
 
 if [[ ${#inputs[@]} -eq 0 ]]; then
-    echo "No tests found in $test_dir/in"
+    echo "No tests found in $inputs_dir"
     exit 1
 fi
 

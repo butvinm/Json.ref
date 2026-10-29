@@ -25,7 +25,7 @@ make test
 
 [MIT](LICENSE)
 
-The test data in `test/test_parsing` and `test/test_transform` is copied from [JSONTestSuite](https://github.com/nst/JSONTestSuite) (commit `1ef36fa`), copyright (c) 2016 Nicolas Seriot, under its own MIT license, see [NOTICE](NOTICE).
+The test data in `test/fixtures/JSONTestSuite` is copied from [JSONTestSuite](https://github.com/nst/JSONTestSuite) (commit `1ef36fa`), copyright (c) 2016 Nicolas Seriot, under its own MIT license, see [NOTICE](NOTICE).
 
 ## References
 

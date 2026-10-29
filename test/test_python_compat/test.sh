@@ -2,7 +2,7 @@
 
 # Checks that a file means the same to Python before and after a round trip through Json-Parse and Json-Stringify:
 #   json.load(file) == json.load(stringify(parse(file)))
-# Inputs are the y_ files of ../test_parsing/in, the ones every parser must accept.
+# Inputs are the y_ files of ../fixtures/JSONTestSuite/parsing, the ones every parser must accept.
 # run.sh performs the full compatibility check for each file.
 
 test_dir=$(dirname "$0")
@@ -12,7 +12,7 @@ source "$test_dir/../lib.sh"
 # relative to the current directory when possible, to report short paths without ../
 suites_dir=$(cd "$test_dir/.." && pwd)
 suites_dir=${suites_dir#"$PWD"/}
-inputs_dir="$suites_dir/test_parsing/in"
+inputs_dir="$suites_dir/fixtures/JSONTestSuite/parsing"
 runner="$test_dir/run.sh"
 python=${PYTHON:-python3}
 
