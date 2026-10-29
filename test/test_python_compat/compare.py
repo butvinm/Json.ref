@@ -7,16 +7,34 @@ Exit codes: 1 - the values differ, 2 - Python can't load the round-tripped file,
 
 import json
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 
 def load(path: str, exit_code: int):
     # bytes, not text: the round-tripped file may be not a valid UTF-8, and that must be reported, not crash the script
     try:
-        return json.loads(Path(path).read_bytes())
+        return json.loads(Path(path).read_bytes(), parse_float=Decimal)
     except (ValueError, RecursionError) as error:
         print(f'{path}: {type(error).__name__}: {error}')
         sys.exit(exit_code)
+
+
+def equal_values(left, right) -> bool:
+    # JSON has one number type, but booleans must not compare equal to 0 or 1.
+    if type(left) in (int, Decimal) and type(right) in (int, Decimal):
+        return left == right
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, list):
+        return len(left) == len(right) and all(
+            equal_values(a, b) for a, b in zip(left, right)
+        )
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(
+            equal_values(left[key], right[key]) for key in left
+        )
+    return left == right
 
 
 def main() -> None:
@@ -28,7 +46,7 @@ def main() -> None:
     original = load(original_path, 3)
     round_tripped = load(round_tripped_path, 2)
 
-    if original != round_tripped:
+    if not equal_values(original, round_tripped):
         # values are aligned to be compared at a glance
         width = max(len(original_path), len(round_tripped_path)) + 1
         print(f'{original_path + ":":<{width}} {original!r}')
