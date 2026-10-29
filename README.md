@@ -80,6 +80,10 @@ make test
 - `make test-parsing` checks which files of JSONTestSuite are accepted and which are rejected.
 - `make test-python-compat` checks that a file means the same to Python's `json` before and after a round trip through the parser, requires `python3`.
 
+## Benchmarks
+
+TODO
+
 ## License
 
 [MIT](LICENSE)
