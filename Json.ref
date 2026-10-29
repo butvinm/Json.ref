@@ -288,7 +288,18 @@ Parse-String-SwCharacters {
 Parse-Characters {
   s.Line s.Col t.Stack '"' e.Content = Success s.Line s.Col t.Stack '"' e.Content;
 
-  s.Line s.Col t.Stack s.Char e.Content = <Parse-Characters-SwCharacter <Parse-Character s.Line s.Col t.Stack s.Char e.Content>>;
+  s.Line s.Col t.Stack '\\u' e.Content
+    = <Parse-Characters-SwCharacter <Parse-Unicode s.Line s.Col t.Stack '\\u' e.Content>>;
+
+  s.Line s.Col t.Stack '\\' e.Content
+    = <Parse-Characters-SwCharacter <Parse-Escaped s.Line s.Col t.Stack '\\' e.Content>>;
+
+  s.Line s.Col t.Stack s.Char e.Content
+    , <Compare <Ord s.Char> 32> : '-'
+    = Fails s.Line s.Col 'Character is outside the permitted range U+0020-U+10FFFF';
+
+  s.Line s.Col (e.Stack (e.Characters)) s.Char e.Content
+    = <Parse-Characters s.Line <Inc s.Col> (e.Stack (e.Characters s.Char)) e.Content>;
 
   s.Line s.Col t.Stack /* empty */ = Fails s.Line s.Col 'Unexpected end of input in a string';
 }
@@ -299,21 +310,6 @@ Parse-Characters-SwCharacter {
     = <Parse-Characters s.Line s.Col (e.Stack (e.Characters e.NewCharacters)) e.Content>;
 
   Fails e.Error = Fails e.Error;
-}
-
-
-Parse-Character {
-  s.Line s.Col t.Stack s.Char e.Content
-    , <Compare <Ord s.Char> <Ord '\x20'>> : '-'
-    = Fails s.Line s.Col 'Character is outside the permitted range U+0020-U+10FFFF';
-
-  s.Line s.Col t.Stack '"' e.Content = Fails s.Line s.Col 'Unescaped \'"\' in a string';
-
-  s.Line s.Col t.Stack '\\u' e.Content = <Parse-Unicode s.Line s.Col t.Stack '\\u' e.Content>;
-
-  s.Line s.Col t.Stack '\\' e.Content = <Parse-Escaped s.Line s.Col t.Stack '\\' e.Content>;
-
-  s.Line s.Col (e.Stack) s.Char e.Content = Success s.Line <Inc s.Col> (e.Stack (s.Char)) e.Content;
 }
 
 
@@ -618,7 +614,7 @@ Escape {
   '\t' e.String = '\\t' <Escape e.String>;
 
   s.Char e.String
-    , <Compare <Ord s.Char> <Ord '\x20'>> : '-'
+    , <Compare <Ord s.Char> 32> : '-'
     = '\\u' <PadLeft 4 '0' <NumbToHex <Ord s.Char>>> <Escape e.String>;
 
   s.Char e.String = s.Char <Escape e.String>;
