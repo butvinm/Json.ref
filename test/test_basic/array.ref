@@ -1,0 +1,39 @@
+/**
+Results of Json-Parse for arrays: element order, nesting and structural errors.
+Eq compares the expected result in brackets with the actual result.
+*/
+
+*$FROM Json
+$EXTERN Json-Parse;
+
+$ENTRY Go {
+  = <Eq (Success (Array)) <Json-Parse '[]'>>
+    <Eq (Success (Array)) <Json-Parse ' \t[\r\n ]\n'>>
+    <Eq (Success (Array (Decimal 1 (0)))) <Json-Parse '[1]'>>
+    <Eq
+      (Success (Array True False Null (String 'x') (Decimal 2 (0))))
+      <Json-Parse '[true, false, null, "x", 2]'>
+    >
+    <Eq
+      (Success (Array (Array) (Array (Array Null)) (Object ((String 'a') True))))
+      <Json-Parse '[[], [[null]], {"a":true}]'>
+    >
+
+    <Eq (Fails 1 2 'Expected a value') <Json-Parse '['>>
+    <Eq (Fails 1 2 'Expected a value') <Json-Parse '[,]'>>
+    <Eq (Fails 1 4 'Expected a value') <Json-Parse '[1,]'>>
+    <Eq (Fails 1 4 'Expected a value') <Json-Parse '[1,,2]'>>
+    <Eq (Fails 1 4 'Expected a value') <Json-Parse '[1,'>>
+    <Eq (Fails 1 3 'Expected \']\' at the end of an array') <Json-Parse '[1'>>
+    <Eq (Fails 1 4 'Expected \']\' at the end of an array') <Json-Parse '[1 2]'>>
+    <Eq (Fails 1 3 'Expected \']\' at the end of an array') <Json-Parse '[1}'>>
+    <Eq (Fails 1 3 'Expected \']\' at the end of an array') <Json-Parse '[1:2]'>>
+    <Eq (Fails 3 3 'Expected a value') <Json-Parse '[\n  true,\n  ]'>>
+    <Eq (Fails 3 3 'Expected \']\' at the end of an array') <Json-Parse '[\n  true\n  false]'>>
+    <Eq (Fails 1 7 'Expected a value') <Json-Parse '[{"a":}]'>>
+    <Eq (Fails 1 3 'Expected end of input after the root value') <Json-Parse '[]]'>>;
+}
+
+Eq {
+  (e.Eq) e.Eq = /* pass */;
+}
