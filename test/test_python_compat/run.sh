@@ -65,11 +65,12 @@ esac
 exit_code=$?
 case $exit_code in
     0) echo "PASSED: $input_file"; exit 0 ;;
-    1) echo "round-tripped value differs" ;;
-    2) echo "$python can't load the round-tripped file" ;;
-    3) echo "$python can't load the original file" ;;
-    *) echo "compare.py exited with code $exit_code" ;;
+    1) result="round-tripped value differs" ;;
+    2) result="$python can't load the round-tripped file" ;;
+    3) result="$python can't load the original file" ;;
+    *) result="compare.py exited with code $exit_code" ;;
 esac
+echo "$result $actual_file"
 cat "$tmp_dir/details"
 case $exit_code in
     1|2) exit 1 ;;
