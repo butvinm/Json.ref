@@ -31,4 +31,4 @@ The test data in `test/test_parsing` and `test/test_transform` is copied from [J
 
 - [Refal-05](https://github.com/Mazdaywik/Refal-05)
 - [JSONTestSuite](https://github.com/nst/JSONTestSuite)
-- [ECMA-404 The JSON data interchange syntax](https://ecma-international.org/publications-and-standards/standards/ecma-404/)
+- [RFC 8259 The JavaScript Object Notation (JSON) Data Interchange Format](https://www.rfc-editor.org/info/rfc8259/)

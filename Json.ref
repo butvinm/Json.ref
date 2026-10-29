@@ -245,8 +245,8 @@ Parse-Characters {
 
 
 Parse-Characters-SwCharacter {
-  Success s.Line s.Col (e.Stack (e.Characters) s.Character) e.Content
-    = <Parse-Characters s.Line s.Col (e.Stack (e.Characters s.Character)) e.Content>;
+  Success s.Line s.Col (e.Stack (e.Characters) (e.NewCharacters)) e.Content
+    = <Parse-Characters s.Line s.Col (e.Stack (e.Characters e.NewCharacters)) e.Content>;
 
   Fails e.Error = Fails e.Error;
 }
@@ -259,36 +259,56 @@ Parse-Character {
 
   s.Line s.Col t.Stack '"' e.Content = Fails s.Line s.Col 'Unescaped \'"\' in a string';
 
-  s.Line s.Col t.Stack '\\u' e.Content = <Parse-Hex s.Line s.Col t.Stack '\\u' e.Content>;
+  s.Line s.Col t.Stack '\\u' e.Content = <Parse-Unicode s.Line s.Col t.Stack '\\u' e.Content>;
 
   s.Line s.Col t.Stack '\\' e.Content = <Parse-Escaped s.Line s.Col t.Stack '\\' e.Content>;
 
-  s.Line s.Col (e.Stack) s.Char e.Content = Success s.Line <Inc s.Col> (e.Stack s.Char) e.Content;
+  s.Line s.Col (e.Stack) s.Char e.Content = Success s.Line <Inc s.Col> (e.Stack (s.Char)) e.Content;
 }
 
 
-Parse-Hex {
-  s.Line s.Col (e.Stack) '\\u' s.H0 s.H1 s.H2 s.H3 e.Content
-    , <Hex2Numb s.H0 s.H1 s.H2 s.H3> : Success t.Hex
-    = Success s.Line <Add 6 s.Col> (e.Stack <Chr t.Hex>) e.Content;
+Parse-Unicode {
+  s.Line s.Col (e.Stack) '\\u' s.U0 s.U1 s.U2 s.U3 e.Content
+    , <ParseHex s.U0 s.U1 s.U2 s.U3> : Success s.U
+    , <Utf16-IsHighSurrogate s.U> : True
+    = <Parse-Unicode-ParseSurrogatePair s.Line s.Col (e.Stack s.U) e.Content>;
+
+  s.Line s.Col (e.Stack) '\\u' s.U0 s.U1 s.U2 s.U3 e.Content
+    , <ParseHex s.U0 s.U1 s.U2 s.U3> : Success s.U
+    , <Utf16-IsLowSurrogate s.U> : True
+    = Fails s.Line s.Col 'Unmatched UTF-16 surrogate pair';
+
+  s.Line s.Col (e.Stack) '\\u' s.U0 s.U1 s.U2 s.U3 e.Content
+    , <ParseHex s.U0 s.U1 s.U2 s.U3> : Success s.U
+    = Success s.Line <+ s.Col 6> (e.Stack (<Utf8-FromCodePoint s.U>)) e.Content;
 
   s.Line s.Col t.Stack e.Content = Fails s.Line s.Col 'Expected 4 hex digits after \'\\u\'';
 }
 
 
+Parse-Unicode-ParseSurrogatePair {
+  s.Line s.Col (e.Stack s.H) '\\u' s.U0 s.U1 s.U2 s.U3 e.Content
+    , <ParseHex s.U0 s.U1 s.U2 s.U3> : Success s.L
+    , <Utf16-IsLowSurrogate s.L> : True
+    = Success s.Line <+ s.Col 12> (e.Stack (<Utf8-FromCodePoint <Utf16-SurrogatePairToCodePoint s.H s.L>>)) e.Content;
+
+  s.Line s.Col t.Stack e.Content = Fails s.Line s.Col 'Unmatched UTF-16 surrogate pair';
+}
+
+
 Parse-Escaped {
-  s.Line s.Col (e.Stack) '\\' '"'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack '"'   ) e.Content;
-  s.Line s.Col (e.Stack) '\\' '\\' e.Content = Success s.Line <Add 2 s.Col> (e.Stack '\\'  ) e.Content;
-  s.Line s.Col (e.Stack) '\\' '/'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack '/'   ) e.Content;
-  s.Line s.Col (e.Stack) '\\' 'b'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack '\x08') e.Content;
-  s.Line s.Col (e.Stack) '\\' 'f'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack '\x0C') e.Content;
-  s.Line s.Col (e.Stack) '\\' 'n'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack '\n'  ) e.Content;
-  s.Line s.Col (e.Stack) '\\' 'r'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack '\r'  ) e.Content;
-  s.Line s.Col (e.Stack) '\\' 't'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack '\t'  ) e.Content;
+  s.Line s.Col (e.Stack) '\\' '"'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack ('"'   )) e.Content;
+  s.Line s.Col (e.Stack) '\\' '\\' e.Content = Success s.Line <Add 2 s.Col> (e.Stack ('\\'  )) e.Content;
+  s.Line s.Col (e.Stack) '\\' '/'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack ('/'   )) e.Content;
+  s.Line s.Col (e.Stack) '\\' 'b'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack ('\x08')) e.Content;
+  s.Line s.Col (e.Stack) '\\' 'f'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack ('\x0C')) e.Content;
+  s.Line s.Col (e.Stack) '\\' 'n'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack ('\n'  )) e.Content;
+  s.Line s.Col (e.Stack) '\\' 'r'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack ('\r'  )) e.Content;
+  s.Line s.Col (e.Stack) '\\' 't'  e.Content = Success s.Line <Add 2 s.Col> (e.Stack ('\t'  )) e.Content;
 
   s.Line s.Col t.Stack '\\' /* empty */ = Fails s.Line s.Col 'Unexpected end of input after \\';
 
-  s.Line s.Col t.Stack '\\' e.Content = Fails 'Unsupported escape character';
+  s.Line s.Col t.Stack '\\' e.Content = Fails s.Line s.Col 'Unsupported escape character';
 }
 
 
@@ -397,11 +417,11 @@ Parse-Null {
 
 
 Parse-Ws {
-  s.Line s.Col t.Stack ' '    e.Content = <Parse-Ws s.Line <Inc s.Col> t.Stack e.Content>;
-  s.Line s.Col t.Stack '\t'   e.Content = <Parse-Ws s.Line <Inc s.Col> t.Stack e.Content>;
-  s.Line s.Col t.Stack '\r\n' e.Content = <Parse-Ws <Inc s.Line> 1 t.Stack e.Content>;
-  s.Line s.Col t.Stack '\r'   e.Content = <Parse-Ws <Inc s.Line> 1 t.Stack e.Content>;
-  s.Line s.Col t.Stack '\n'   e.Content = <Parse-Ws <Inc s.Line> 1 t.Stack e.Content>;
+  s.Line s.Col t.Stack ' '    e.Content = <Parse-Ws s.Line <+ s.Col 1> t.Stack e.Content>;
+  s.Line s.Col t.Stack '\t'   e.Content = <Parse-Ws s.Line <+ s.Col 1> t.Stack e.Content>;
+  s.Line s.Col t.Stack '\r\n' e.Content = <Parse-Ws <+ s.Line 1> 1 t.Stack e.Content>;
+  s.Line s.Col t.Stack '\r'   e.Content = <Parse-Ws <+ s.Line 1> 1 t.Stack e.Content>;
+  s.Line s.Col t.Stack '\n'   e.Content = <Parse-Ws <+ s.Line 1> 1 t.Stack e.Content>;
   s.Line s.Col t.Stack        e.Content = Success s.Line s.Col t.Stack e.Content;
 }
 
@@ -420,32 +440,120 @@ IsFirstNumberChar {
 }
 
 
-Hex2Numb {
-  e.Hex = <Do-Hex2Numb 0 e.Hex>;
+Utf16-IsHighSurrogate {
+  s.U
+    , <Compare s.U <HexToNumb 'D7FF'>> : '+'
+    , <Compare s.U <HexToNumb 'DC00'>> : '-'
+    = True;
+
+  s.U = False;
 }
 
 
-Do-Hex2Numb {
-  s.Int s.H e.Hex
-    , <Type s.H> : 'D' e.1
-    = <Do-Hex2Numb <Add <Mul 16 s.Int> <Numb s.H>> e.Hex>;
+Utf16-IsLowSurrogate {
+  s.U
+    , <Compare s.U <HexToNumb 'DBFF'>> : '+'
+    , <Compare s.U <HexToNumb 'E000'>> : '-'
+    = True;
 
-  s.Int s.H e.Hex
-    , <Upper s.H> : s.UH
-    , ('A' 10) ('B' 11) ('C' 12) ('D' 13) ('E' 14) ('F' 15)
-    : e.H-B (s.UH s.Value) e.H-E
-    = <Do-Hex2Numb <Add <Mul 16 s.Int> s.Value> e.Hex>;
-
-  s.Int /* empty */ = Success s.Int;
-
-  s.Int e.Bad = Fails 'Expected a hex digit';
+  s.U = False;
 }
 
 
-MapJoin {
-  t.Func s.Del /* empty */ = /* empty */;
-  t.Func s.Del t.Item = <Mu t.Func t.Item>;
-  t.Func s.Del t.Item e.Items = <Mu t.Func t.Item> s.Del <MapJoin t.Func s.Del e.Items>;
+Utf16-SurrogatePairToCodePoint {
+  s.H s.L = <+ (<+ <* <- s.H <HexToNumb 'D800'>> 1024> <- s.L <HexToNumb 'DC00'>>>) <HexToNumb '10000'>>;
+}
+
+
+Utf8-FromCodePoint {
+  e.U = <Utf8-FromCodePoint-Sw (e.U) <NumbToBytes (e.U)>>;
+}
+
+
+* !!!  u0080 = 128 - 1 byte but out of the first range, so should be Y X = 0 128
+
+
+Utf8-FromCodePoint-Sw {
+* 0000-007F
+  t.U e.Bytes
+    , <Compare t.U <HexToNumb '0080'>> : '-'
+    , <PadLeft 1 0 e.Bytes> : s.X /* 0XXXxxxx */
+    =
+      <Chr s.X>; /* 0XXXxxxx */
+
+* 0080-07FF
+  t.U e.Bytes
+    , <Compare t.U <HexToNumb '0800'>> : '-'
+    , <PadLeft 2 0 e.Bytes> : s.Y s.X /* 00000yyy XXXXxxxx */
+    =
+      <Chr <+ 192 <+ <% <* s.Y 4> 256> </ s.X 64>>>> /* 110yyyXX */
+      <Chr <+ 128 </ <% <* s.X 4> 256> 4>>>; /* 10XXxxxx */
+
+* 0800-FFFF
+  t.U e.Bytes
+    , <Compare t.U <HexToNumb '010000'>> : '-'
+    , <PadLeft 2 0 e.Bytes> : s.Y s.X /* YYYYyyyy XXXXxxxx */
+    =
+      <Chr <+ 224 </ s.Y 16>>> /* 1110YYYY */
+      <Chr <+ 128 <+ <% <* <% s.Y 16> 4> 256> </ s.X 64>>>> /* 10yyyyXX */
+      <Chr <+ 128 </ <% <* s.X 4> 256> 4>>>; /* 10XXxxxx */
+
+* 10000-10FFFF
+  t.U e.Bytes
+    , <PadLeft 3 0 e.Bytes> : s.Z s.Y s.X /* 000Zzzzz YYYYyyyy XXXXxxxx */
+    =
+      <Chr <+ 240 </ s.Z 4>>> /* 11110Zzz */
+      <Chr <+ 128 <+ <% <* <% s.Z 4> 16> 256> </ s.Y 16>>>> /* 10zzYYYY */
+      <Chr <+ 128 <+ <% <* <% s.Y 16> 4> 256> </ s.X 64>>>> /* 10yyyyXX */
+      <Chr <+ 128 </ <% <* s.X 4> 256> 4>>>; /* 10XXxxxx */
+}
+
+
+NumbToBytes {
+  (0) /* empty */ = 0;
+
+  (0) e.Bytes = e.Bytes;
+
+  t.Numb e.Bytes = <NumbToBytes <Divmod t.Numb 256> e.Bytes>;
+}
+
+
+ParseHex {
+  e.Hex = <Do-ParseHex (0) e.Hex>
+}
+
+
+Do-ParseHex {
+  (e.Numb) /* empty */ = Success e.Numb;
+
+  t.Numb s.H e.Hex = <Do-ParseHex-SwHexDigit (<ParseHexDigit s.H>) t.Numb e.Hex>;
+}
+
+
+Do-ParseHex-SwHexDigit {
+  (Success s.Digit) t.Numb e.Hex = <Do-ParseHex (<Add (<Mul t.Numb 16>) s.Digit>) e.Hex>;
+
+  (Fails e.Error) t.Numb e.Hex = Fails e.Error;
+}
+
+ParseHexDigit {
+  '0' = Success 0;
+  '1' = Success 1;
+  '2' = Success 2;
+  '3' = Success 3;
+  '4' = Success 4;
+  '5' = Success 5;
+  '6' = Success 6;
+  '7' = Success 7;
+  '8' = Success 8;
+  '9' = Success 9;
+  'A' = Success 10; 'a' = Success 10;
+  'B' = Success 11; 'b' = Success 11;
+  'C' = Success 12; 'c' = Success 12;
+  'D' = Success 13; 'd' = Success 13;
+  'E' = Success 14; 'e' = Success 14;
+  'F' = Success 15; 'f' = Success 15;
+  s.Bad = Fails 'Expected a hex digit';
 }
 
 
@@ -458,7 +566,13 @@ Escape {
   '\n' e.String = '\\n' <Escape e.String>;
   '\r' e.String = '\\r' <Escape e.String>;
   '\t' e.String = '\\t' <Escape e.String>;
+
+  s.Char e.String
+    , <Compare <Ord s.Char> <Ord '\x20'>> : '-'
+    = '\\u' <PadLeft 4 '0' <NumbToHex <Ord s.Char>>> <Escape e.String>;
+
   s.Char e.String = s.Char <Escape e.String>;
+
   /* empty */ = /* empty */;
 }
 
@@ -607,4 +721,62 @@ DecimalToScientific-Fraction {
   /* empty */ = /* empty */;
 
   e.Digits = '.' e.Digits;
+}
+
+
+HexToNumb {
+  e.Hex, <ParseHex e.Hex> : Success e.Numb = e.Numb;
+}
+
+
+NumbToHex {
+  t.Numb = <NumbToHex-SwQR <Divmod t.Numb 16>>;
+}
+
+NumbToHex-SwQR {
+  (0) s.R = <NumbToHexDigit s.R>;
+
+  t.Q s.R = <NumbToHex t.Q> <NumbToHexDigit s.R>;
+}
+
+
+
+NumbToHexDigit {
+  0 = '0';
+  1 = '1';
+  2 = '2';
+  3 = '3';
+  4 = '4';
+  5 = '5';
+  6 = '6';
+  7 = '7';
+  8 = '8';
+  9 = '9';
+  10 = 'A';
+  11 = 'B';
+  12 = 'C';
+  13 = 'D';
+  14 = 'E';
+  15 = 'F';
+}
+
+
+MapJoin {
+  t.Func s.Del /* empty */ = /* empty */;
+  t.Func s.Del t.Item = <Mu t.Func t.Item>;
+  t.Func s.Del t.Item e.Items = <Mu t.Func t.Item> s.Del <MapJoin t.Func s.Del e.Items>;
+}
+
+
+PadLeft {
+  s.Length t.Pad /* empty */ = <Repeat s.Length t.Pad>;
+
+  s.Length t.Pad e.Items t.Item = <PadLeft <Sub s.Length 1> t.Pad e.Items> t.Item
+}
+
+
+Repeat {
+  0 t.I = /* empty */;
+
+  s.N t.I = t.I <Repeat <Sub s.N 1> t.I>;
 }

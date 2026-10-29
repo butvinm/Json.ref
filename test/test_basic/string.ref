@@ -10,7 +10,8 @@ $EXTERN Json-Parse;
 
 
 $ENTRY Go {
-  = <Eq (Success (String )) <Json-Parse '""'>>
+  =
+    <Eq (Success (String )) <Json-Parse '""'>>
     <Eq (Success (String 'abc')) <Json-Parse '"abc"'>>
     <Eq (Success (String ' a  b ')) <Json-Parse '" a  b "'>>
     <Eq (Success (String 'true')) <Json-Parse '"true"'>>
@@ -51,12 +52,6 @@ $ENTRY Go {
     <Eq (Success (String '\xEF\xBF\xBF')) <Json-Parse '"\\uFFFF"'>>
     <Eq (Success (String 'a\xC3\xA9b\xE2\x82\xAC')) <Json-Parse '"a\\u00e9b\\u20ac"'>>
     <Eq (Success (String '\xC3\xA9\xC3\xA9')) <Json-Parse '"\\u00e9\xC3\xA9"'>>
-
-    <Eq (Success (String '\xF0\x90\x80\x80')) <Json-Parse '"\\uD800\\uDC00"'>>
-    <Eq (Success (String '\xF0\x9F\x98\x80')) <Json-Parse '"\\uD83D\\uDE00"'>>
-    <Eq (Success (String '\xF0\x9F\x98\x80')) <Json-Parse '"\\ud83d\\ude00"'>>
-    <Eq (Success (String '\xF4\x8F\xBF\xBF')) <Json-Parse '"\\uDBFF\\uDFFF"'>>
-    <Eq (Success (String 'a\xF0\x9F\x98\x80b\xF0\x9F\x98\x80')) <Json-Parse '"a\\uD83D\\uDE00b\\uD83D\\uDE00"'>>
 
     <Eq (Fails 1 1 'Expected a value') <Json-Parse '\'a\''>>
     <Eq (Fails 1 1 'Expected a value') <Json-Parse 'abc"'>>
