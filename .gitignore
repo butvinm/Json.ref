@@ -5,6 +5,6 @@ test/test_stringify/out
 test/test_parsing/run
 test/test_python_compat/run
 test/test_python_compat/out
-example
+refjq
 *.dSYM
 /.dump*.ref

@@ -8,21 +8,68 @@ t.Value ::=
     True | False | Null
 
 t.Object ::= (Object (t.String t.Value)*)
+  Member order and duplicate keys are preserved.
 t.Array ::= (Array t.Value*)
 t.String ::= (String s.CHAR*)
+  Strings contain UTF-8 bytes. Unicode escapes (\uXXXX) are decoded into UTF-8.
 
 t.Number ::= (Decimal e.Coefficient (e.Exponent))
 e.Coefficient ::= '-'? s.NUMBER+
 e.Exponent ::= '-'? s.NUMBER
   Decimal numbers in the General Decimal Arithmetic Specification format.
-  Value = Coefficient * 10^Exponent
+  A number should have no more than 4300 significant digits.
+  The exponent of its last digit must be between -4294967295 and 4294967295.
   TODO: Implement Decimal.ref and attach a link
+
+  Value = Coefficient * 10^Exponent
 
 s.Line ::= s.NUMBER
 s.Col ::= s.NUMBER
-  s.Line and s.Col count from 1 and point at the first character that could not be parsed.
+  Lines and columns count from 1, columns count input bytes.
+  CR, LF and CRLF each start a new line.
+  The position identifies the parse error and may point to the beginning of an
+  invalid escape or number, or past the input at EOF.
 
 e.Error ::= s.CHAR*
+
+Usage:
+  $EXTERN ArgList, LoadFile;
+  $EXTERN Json-Parse, Json-Stringify;
+
+  $ENTRY Go {
+    , <Json-Parse '{"string":"hello","number":42,"boolean":true,"null":null,"array":[1,2],"object":{}}'>
+    : Success (Object
+        ((String 'string') (String 'hello'))
+        ((String 'number') (Decimal 42 (0)))
+        ((String 'boolean') True)
+        ((String 'null') Null)
+        ((String 'array') (Array (Decimal 1 (0)) (Decimal 2 (0))))
+        ((String 'object') (Object))
+      )
+    = ;
+  }
+
+  $ENTRY Go {
+    , <ArgList> : {
+      (e.Exe) (e.File)
+        , <Json-Parse <UnwrapLines <LoadFile e.File>>>
+        : {
+          Success t.Json = <Prout <Json-Stringify t.Json>>;
+          Fails s.Line s.Col e.Error
+            = <Prout e.File ':' <Symb s.Line> ':' <Symb s.Col> ' ' e.Error>
+              <Exit 2>;
+        };
+      (e.Exe) e.Args
+        = <Prout 'usage: ' e.Exe ' <file.json>'>
+          <Exit 1>;
+    };
+  }
+
+  UnwrapLines {
+    (e.Line) = e.Line;
+    (e.Line) e.Lines = e.Line '\n' <UnwrapLines e.Lines>;
+    = ;
+  }
 */
 $ENTRY Json-Parse {
   e.Content = <Json-Parse-SwElement <Parse-Element 1 1 () e.Content>>;
@@ -31,6 +78,9 @@ $ENTRY Json-Parse {
 
 /**
 <Json-Stringify t.Json> == s.CHAR*
+
+Produces compact JSON without a trailing newline, preserving member order and duplicate keys.
+Original whitespace, escape spelling and number spelling are not preserved.
 */
 $ENTRY Json-Stringify {
   Null = 'null';

@@ -1,0 +1,209 @@
+/**
+A small JSON query CLI. Filters: `.`, `.field`, `.[index]`, `.[]`, and chains of these.
+Usage:
+  make refjq
+  ./refjq '.' data.json
+  ./refjq '.users[0].name' data.json
+  ./refjq '.users[].name' data.json
+  echo '{"name":"Ada"}' | ./refjq '.name'
+
+Exit codes: 1 usage or file error, 2 invalid JSON, 3 invalid filter or incompatible value type.
+*/
+
+
+*$FROM LibraryEx
+$EXTERN ArgList;
+
+*$FROM Json
+$EXTERN Json-Parse, Json-Stringify;
+
+
+$ENTRY Go {
+  , <ArgList> : {
+    (e.Exe) (e.Filter)
+      , <Filter e.Filter> : e.Ops
+      = <Run '<stdin>' (e.Ops) <ReadInput 0 <Get 0>>>;
+
+    (e.Exe) (e.Filter) (e.File)
+      , <Filter e.Filter> : e.Ops
+      = <Run e.File (e.Ops) <ReadFile e.File>>;
+
+    (e.Exe) e.Args
+      = <Putout 0 'usage: ' e.Exe ' <filter> [file.json]'>
+        <Exit 1>;
+  };
+}
+
+
+ReadFile {
+  e.File
+    , <ExistFile e.File> : True
+    = <Open 'r' 1 e.File>
+      <ReadInput 1 <Get 1>>
+      <Close 1>;
+
+  e.File
+    = <Putout 0 e.File ': cannot read file'>
+      <Exit 1>;
+}
+
+
+ReadInput {
+  s.Handle e.Line 0 = e.Line;
+
+  s.Handle e.Line = e.Line '\n' <ReadInput s.Handle <Get s.Handle>>;
+}
+
+
+Run {
+  e.Source (e.Ops) e.Input
+    , <Json-Parse e.Input> : {
+      Success t.Json = <PrintResults <Apply (e.Ops) t.Json>>;
+
+      Fails s.Line s.Col e.Error
+        = <Putout 0 e.Source ':' <Symb s.Line> ':' <Symb s.Col> ' ' e.Error>
+          <Exit 2>;
+    };
+}
+
+
+PrintResults {
+  t.Json e.Rest
+    = <Prout <Json-Stringify t.Json>>
+      <PrintResults e.Rest>;
+
+  = ;
+}
+
+
+Filter {
+  '.' = ;
+
+  '.' '[' e.Rest = <Tail '[' e.Rest>;
+
+  '.' e.Rest = <FieldStart e.Rest>;
+
+  e.Bad = <QueryError 'filter must start with .'>;
+}
+
+
+FieldStart {
+  s.C e.Rest
+    , <NameStart s.C> : True
+    = <Field (s.C) e.Rest>;
+
+  e.Bad = <QueryError 'expected a field name'>;
+}
+
+
+NameStart {
+  s.C
+    , 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_' : e.A s.C e.B
+    = True;
+
+  s.C = False;
+}
+
+
+NameChar {
+  s.C
+    , <NameStart s.C> : True
+    = True;
+
+  s.C
+    , '0123456789' : e.A s.C e.B
+    = True;
+
+  s.C = False;
+}
+
+
+Field {
+  (e.Name) s.C e.Rest
+    , <NameChar s.C> : True
+    = <Field (e.Name s.C) e.Rest>;
+
+  (e.Name) e.Rest = (Key e.Name) <Tail e.Rest>;
+}
+
+
+Tail {
+  = ;
+
+  '.' e.Rest = <FieldStart e.Rest>;
+
+  '[' ']' e.Rest = Each <Tail e.Rest>;
+
+  '[' e.Rest = <Index () e.Rest>;
+
+  e.Bad = <QueryError 'expected .field, [index] or []'>;
+}
+
+
+Index {
+  (e.Digits) s.C e.Rest
+    , '0123456789' : e.A s.C e.B
+    = <Index (e.Digits s.C) e.Rest>;
+
+  (s.D e.Digits) ']' e.Rest = (At <Numb s.D e.Digits>) <Tail e.Rest>;
+
+  e.Bad = <QueryError 'expected a nonnegative array index followed by ]'>;
+}
+
+
+Apply {
+  () t.Json = t.Json;
+
+  ((Key e.Name) e.Ops) (Object e.Members)
+    = <Apply (e.Ops) <Lookup (e.Name) Null e.Members>>;
+
+  ((Key e.Name) e.Ops) Null = <Apply (e.Ops) Null>;
+
+  ((Key e.Name) e.Ops) t.Other = <QueryError 'field access requires an object'>;
+
+  ((At e.Index) e.Ops) (Array e.Items)
+    = <Apply (e.Ops) <At (e.Index) e.Items>>;
+
+  ((At e.Index) e.Ops) Null = <Apply (e.Ops) Null>;
+
+  ((At e.Index) e.Ops) t.Other = <QueryError 'index access requires an array'>;
+
+  (Each e.Ops) (Array e.Items) = <Each (e.Ops) e.Items>;
+
+  (Each e.Ops) t.Other = <QueryError 'iteration requires an array'>;
+}
+
+
+/* Last matching key wins, as in common JSON object consumers. */
+Lookup {
+  (e.Name) t.Found ((String e.Name) t.Value) e.Rest = <Lookup (e.Name) t.Value e.Rest>;
+
+  (e.Name) t.Found t.Member e.Rest = <Lookup (e.Name) t.Found e.Rest>;
+
+  (e.Name) t.Found = t.Found;
+}
+
+
+At {
+  (0) t.Item e.Rest = t.Item;
+
+  (e.Index) t.Item e.Rest = <At (<Sub e.Index 1>) e.Rest>;
+
+  (e.Index) = Null;
+}
+
+
+Each {
+  (e.Ops) t.Item e.Rest
+    = <Apply (e.Ops) t.Item>
+      <Each (e.Ops) e.Rest>;
+
+  (e.Ops) = ;
+}
+
+
+QueryError {
+  e.Message
+    = <Putout 0 'query error: ' e.Message>
+      <Exit 3>;
+}
