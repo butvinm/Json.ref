@@ -32,12 +32,12 @@ for input_file in "${inputs[@]}"; do
         continue
     fi
 
-    "$test_dir/run" "$input_file" > "$actual_file" 2> "$tmp_dir/$filename.stderr"
+    run_limited "$test_dir/run" "$input_file" > "$actual_file" 2> "$tmp_dir/$filename.stderr"
     exit_code=$?
 
     # 0 is a parsed file, 2 is a reported parse error, which is printed and shows up in the diff
     if [[ $exit_code -ne 0 && $exit_code -ne 2 ]]; then
-        record "$input_file" ERROR "runner exited with code $exit_code" "$(cat "$tmp_dir/$filename.stderr")"
+        record "$input_file" ERROR "$(crash_message "$exit_code")" "$(cat "$tmp_dir/$filename.stderr")"
     elif diff -u -L "$expected_file" -L "$actual_file" "$expected_file" "$actual_file" > "$tmp_dir/$filename.diff"; then
         record "$input_file" PASSED
     else
